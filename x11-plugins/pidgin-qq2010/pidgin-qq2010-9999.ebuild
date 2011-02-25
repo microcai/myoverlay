@@ -26,6 +26,7 @@ DEPEND="${RDEPEND}
 src_prepare() {
 	epatch "${FILESDIR}/libqq-pidgin-buildpatch.patch"
 	mkdir -p m4
+	mkdir -p libpurple
 	eautoreconf
 }
 
