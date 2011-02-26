@@ -14,7 +14,7 @@ ESVN_REPO_URI="http://libqq-pidgin.googlecode.com/svn/trunk/"
 LICENSE="GPL-2"
 SLOT="0"
 KEYWORDS="amd64 hppa ppc ~ppc64 sparc x86 ~x86-fbsd"
-IUSE="nls"
+IUSE="nls debug"
 
 RDEPEND="net-im/pidgin[-qq]
 	>=x11-libs/gtk+-2
@@ -24,15 +24,17 @@ DEPEND="${RDEPEND}
 	dev-util/pkgconfig"
 
 src_prepare() {
-	epatch "${FILESDIR}/libqq-pidgin-buildpatch.patch"
 	mkdir -p m4
-	mkdir -p libpurple
 	eautoreconf
 }
 
 src_configure() {
 	strip-flags
 	replace-flags -O? -O2
+	if use debug ; then 
+		replace-flags -O? -O0
+		replace-flags -g? -g3
+	fi
 	econf $(use_enable nls)
 }
 
