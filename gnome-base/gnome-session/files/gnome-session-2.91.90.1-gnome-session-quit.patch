@@ -1,0 +1,675 @@
+From 8663860ff44b9a5e441e4909a49eee4cfa08378d Mon Sep 17 00:00:00 2001
+From: William Jon McCann <jmccann@redhat.com>
+Date: Thu, 24 Feb 2011 17:38:13 -0500
+Subject: [PATCH 08/12] rename gnome-session-save to gnome-session-quit
+
+Is much less misleading since it doesn't save anything.
+---
+ doc/man/Makefile.am          |    2 +-
+ doc/man/gnome-session-quit.1 |   25 ++++
+ doc/man/gnome-session-save.1 |   40 ------
+ po/POTFILES.in               |    2 +-
+ tools/Makefile.am            |   10 +-
+ tools/gnome-session-quit.c   |  215 +++++++++++++++++++++++++++++++
+ tools/gnome-session-save.c   |  293 ------------------------------------------
+ 7 files changed, 247 insertions(+), 340 deletions(-)
+ create mode 100644 doc/man/gnome-session-quit.1
+ delete mode 100644 doc/man/gnome-session-save.1
+ create mode 100644 tools/gnome-session-quit.c
+ delete mode 100644 tools/gnome-session-save.c
+
+diff --git a/doc/man/Makefile.am b/doc/man/Makefile.am
+index 72f9a93..e42430a 100644
+--- a/doc/man/Makefile.am
++++ b/doc/man/Makefile.am
+@@ -1,7 +1,7 @@
+ man_MANS =				\
+ 	gnome-session.1			\
+ 	gnome-session-properties.1	\
+-	gnome-session-save.1
++	gnome-session-quit.1
+ 
+ EXTRA_DIST =			\
+ 	$(man_MANS)
+diff --git a/doc/man/gnome-session-quit.1 b/doc/man/gnome-session-quit.1
+new file mode 100644
+index 0000000..2f6df84
+--- /dev/null
++++ b/doc/man/gnome-session-quit.1
+@@ -0,0 +1,25 @@
++.\"
++.\" gnome-session-quit manual page.
++.\" (C) 2000 Miguel de Icaza (miguel@helixcode.com)
++.\" (C) 2009-2010 Vincent Untz (vuntz@gnome.org)
++.\"
++.TH GNOME-SESSION-QUIT 1 "GNOME"
++.SH NAME
++gnome-session-quit \- End the current GNOME session
++.SH SYNOPSIS
++.B gnome-session-quit [\-\-logout] [\-\-power-off] [\-\-no-prompt]
++.SH DESCRIPTION
++The \fIgnome-session-quit\fP program can be used to end a GNOME session.
++.PP
++If called with the \fB\-\-logout\fP option the user will be prompted
++to confirm logout.  The \fB\-\-no\-prompt\fP option can be used to end
++the session without user interaction.
++.PP
++When the \fB\-\-power\-off\fP option is given the user will be
++prompted to confirm system power off.  The \fB\-\-no\-prompt\fP option
++can be used to power off without user interaction.
++.SH BUGS
++If you find bugs in the \fIgnome-session-quit\fP program, please report
++these on https://bugzilla.gnome.org.
++.SH SEE ALSO
++.BR gnome-session(1)
+diff --git a/doc/man/gnome-session-save.1 b/doc/man/gnome-session-save.1
+deleted file mode 100644
+index bdea8f9..0000000
+--- a/doc/man/gnome-session-save.1
++++ /dev/null
+@@ -1,40 +0,0 @@
+-.\"
+-.\" gnome-session-save manual page.
+-.\" (C) 2000 Miguel de Icaza (miguel@helixcode.com)
+-.\" (C) 2009-2010 Vincent Untz (vuntz@gnome.org)
+-.\"
+-.TH GNOME-SESSION-SAVE 1 "GNOME"
+-.SH NAME
+-gnome-session-save \- End or save the current GNOME session
+-.SH SYNOPSIS
+-.B gnome-session-save [\-\-logout] [\-\-force\-logout] [\-\-logout\-dialog] [\-\-shutdown\-dialog] [\-\-gui] [\-\-kill [\-\-silent]]
+-.SH DESCRIPTION
+-The \fIgnome-session-save\fP program can be used from a GNOME session to
+-save a snapshot of the currently running applications. This session will
+-be later restored at your next GNOME session.
+-.PP
+-The \fB\-\-gui\fP option will report errors in dialog boxes instead of
+-printing to stderr.
+-.PP
+-If called with the \fB\-\-logout\fP option, the current GNOME session will be
+-ended, unless logging out has been inhibited by an application. The
+-\fB\-\-force\-logout\fP option can be used to end the session regardless of
+-the inhibition state.
+-.PP
+-When the \fB\-\-logout\-dialog\fP option is given, the standard dialog
+-displaying logout options is displayed. When \fB\-\-shutdown\-dialog\fP
+-option is given, the standard dialog displaying shutdown options is
+-displayed.
+-.PP
+-The \fB\-\-kill\fP and \fB\-\-silent\fP options are deprecated. The
+-\fB\-\-kill\fP option is equivalent to the \fB\-\-logout\-dialog\fP
+-option. If \fB\-\-silent\fP is used with \fB\-\-kill\fR, then it will
+-behave as if \fB\-\-logout\fP was used.
+-.PP
+-The session is not saved when \fIgnome-session-save\fP is called with any of
+-the options ending the session.
+-.SH BUGS
+-If you find bugs in the \fIgnome-session-save\fP program, please report
+-these on https://bugzilla.gnome.org.
+-.SH SEE ALSO
+-.BR gnome-session(1)
+diff --git a/po/POTFILES.in b/po/POTFILES.in
+index 4b3a1a1..1e7491d 100644
+--- a/po/POTFILES.in
++++ b/po/POTFILES.in
+@@ -20,4 +20,4 @@ gnome-session/gsm-xsmp-client.c
+ gnome-session/gsm-xsmp-server.c
+ gnome-session/gsm-util.c
+ gnome-session/main.c
+-tools/gnome-session-save.c
++tools/gnome-session-quit.c
+diff --git a/tools/Makefile.am b/tools/Makefile.am
+index fbc41b5..f53a012 100644
+--- a/tools/Makefile.am
++++ b/tools/Makefile.am
+@@ -1,14 +1,14 @@
+-bin_PROGRAMS = gnome-session-save
++bin_PROGRAMS = gnome-session-quit
+ libexec_PROGRAMS = gnome-session-is-accelerated
+ 
+ AM_CPPFLAGS =
+ 
+ AM_CFLAGS = $(WARN_CFLAGS)
+ 
+-gnome_session_save_SOURCES =			\
+-	gnome-session-save.c
++gnome_session_quit_SOURCES =			\
++	gnome-session-quit.c
+ 
+-gnome_session_save_CPPFLAGS =			\
++gnome_session_quit_CPPFLAGS =			\
+ 	$(AM_CPPFLAGS)				\
+ 	$(GNOME_SESSION_CFLAGS)			\
+ 	$(DBUS_GLIB_CFLAGS)			\
+@@ -16,7 +16,7 @@ gnome_session_save_CPPFLAGS =			\
+ 	-DLOCALE_DIR=\""$(datadir)/locale"\"	\
+ 	$(DISABLE_DEPRECATED_CFLAGS)
+ 
+-gnome_session_save_LDADD =			\
++gnome_session_quit_LDADD =			\
+ 	$(SM_LIBS)				\
+ 	$(ICE_LIBS)				\
+ 	$(GNOME_SESSION_LIBS)			\
+diff --git a/tools/gnome-session-quit.c b/tools/gnome-session-quit.c
+new file mode 100644
+index 0000000..f5d1838
+--- /dev/null
++++ b/tools/gnome-session-quit.c
+@@ -0,0 +1,215 @@
++/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 8 -*-
++ * save-session.c - Small program to talk to session manager.
++
++   Copyright (C) 1998 Tom Tromey
++   Copyright (C) 2008 Red Hat, Inc.
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2, or (at your option)
++   any later version.
++
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++
++   You should have received a copy of the GNU General Public License
++   along with this program; if not, write to the Free Software
++   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
++   02111-1307, USA.
++*/
++
++#include <config.h>
++
++#include <unistd.h>
++#include <stdlib.h>
++#include <stdio.h>
++#include <string.h>
++
++#include <glib/gi18n.h>
++#include <gtk/gtk.h>
++
++#include <dbus/dbus-glib.h>
++#include <dbus/dbus-glib-lowlevel.h>
++
++#define GSM_SERVICE_DBUS   "org.gnome.SessionManager"
++#define GSM_PATH_DBUS      "/org/gnome/SessionManager"
++#define GSM_INTERFACE_DBUS "org.gnome.SessionManager"
++
++enum {
++        GSM_LOGOUT_MODE_NORMAL = 0,
++        GSM_LOGOUT_MODE_NO_CONFIRMATION,
++        GSM_LOGOUT_MODE_FORCE
++};
++
++static gboolean logout = FALSE;
++static gboolean power_off = FALSE;
++static gboolean no_prompt = FALSE;
++static gboolean force = FALSE;
++
++static GOptionEntry options[] = {
++        {"logout", '\0', 0, G_OPTION_ARG_NONE, &logout, N_("Log out"), NULL},
++        {"power-off", '\0', 0, G_OPTION_ARG_NONE, &power_off, N_("Power off"), NULL},
++        {"force", '\0', 0, G_OPTION_ARG_NONE, &force, N_("Ignoring any existing inhibitors"), NULL},
++        {"no-prompt", '\0', 0, G_OPTION_ARG_NONE, &no_prompt, N_("Don't prompt for user confirmation"), NULL},
++        {NULL}
++};
++
++static void
++display_error (const char *message)
++{
++        g_printerr ("%s\n", message);
++}
++
++static DBusGConnection *
++get_session_bus (void)
++{
++        DBusGConnection *bus;
++        GError *error = NULL;
++
++        bus = dbus_g_bus_get (DBUS_BUS_SESSION, &error);
++
++        if (bus == NULL) {
++                g_warning ("Couldn't connect to session bus: %s", error->message);
++                g_error_free (error);
++        }
++
++        return bus;
++}
++
++static DBusGProxy *
++get_sm_proxy (void)
++{
++        DBusGConnection *connection;
++        DBusGProxy      *sm_proxy;
++
++        connection = get_session_bus ();
++        if (connection == NULL) {
++                display_error (_("Could not connect to the session manager"));
++                return NULL;
++        }
++
++        sm_proxy = dbus_g_proxy_new_for_name (connection,
++                                               GSM_SERVICE_DBUS,
++                                               GSM_PATH_DBUS,
++                                               GSM_INTERFACE_DBUS);
++
++        if (sm_proxy == NULL) {
++                display_error (_("Could not connect to the session manager"));
++                return NULL;
++        }
++
++        return sm_proxy;
++}
++
++static void
++do_logout (unsigned int mode)
++{
++        DBusGProxy *sm_proxy;
++        GError     *error;
++        gboolean    res;
++
++        sm_proxy = get_sm_proxy ();
++        if (sm_proxy == NULL) {
++                return;
++        }
++
++        error = NULL;
++        res = dbus_g_proxy_call (sm_proxy,
++                                 "Logout",
++                                 &error,
++                                 G_TYPE_UINT, mode,
++                                 G_TYPE_INVALID,
++                                 G_TYPE_INVALID);
++
++        if (!res) {
++                if (error != NULL) {
++                        g_warning ("Failed to call logout: %s",
++                                   error->message);
++                        g_error_free (error);
++                } else {
++                        g_warning ("Failed to call logout");
++                }
++        }
++
++        if (sm_proxy != NULL) {
++                g_object_unref (sm_proxy);
++        }
++}
++
++static void
++do_power_off (void)
++{
++        DBusGProxy *sm_proxy;
++        GError     *error;
++        gboolean    res;
++
++        sm_proxy = get_sm_proxy ();
++        if (sm_proxy == NULL) {
++                return;
++        }
++
++        error = NULL;
++        res = dbus_g_proxy_call (sm_proxy,
++                                 "Shutdown",
++                                 &error,
++                                 G_TYPE_INVALID,
++                                 G_TYPE_INVALID);
++
++        if (!res) {
++                if (error != NULL) {
++                        g_warning ("Failed to call shutdown: %s",
++                                   error->message);
++                        g_error_free (error);
++                } else {
++                        g_warning ("Failed to call shutdown");
++                }
++        }
++
++        if (sm_proxy != NULL) {
++                g_object_unref (sm_proxy);
++        }
++}
++
++int
++main (int argc, char *argv[])
++{
++        GError *error;
++        int     conflicting_options;
++
++        /* Initialize the i18n stuff */
++        bindtextdomain (GETTEXT_PACKAGE, LOCALE_DIR);
++        bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
++        textdomain (GETTEXT_PACKAGE);
++
++        error = NULL;
++        if (! gtk_init_with_args (&argc, &argv, NULL, options, NULL, &error)) {
++                g_warning ("Unable to start: %s", error->message);
++                g_error_free (error);
++                exit (1);
++        }
++
++        conflicting_options = 0;
++        if (logout)
++                conflicting_options++;
++        if (power_off)
++                conflicting_options++;
++        if (conflicting_options > 1)
++                display_error (_("Program called with conflicting options"));
++
++        if (power_off) {
++                do_power_off ();
++        } else {
++                /* default to logout */
++
++                if (force)
++                        do_logout (GSM_LOGOUT_MODE_FORCE);
++                else if (no_prompt)
++                        do_logout (GSM_LOGOUT_MODE_NO_CONFIRMATION);
++                else
++                        do_logout (GSM_LOGOUT_MODE_NORMAL);
++        }
++
++        return 0;
++}
+diff --git a/tools/gnome-session-save.c b/tools/gnome-session-save.c
+deleted file mode 100644
+index 28f6443..0000000
+--- a/tools/gnome-session-save.c
++++ /dev/null
+@@ -1,293 +0,0 @@
+-/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 8 -*-
+- * save-session.c - Small program to talk to session manager.
+-
+-   Copyright (C) 1998 Tom Tromey
+-   Copyright (C) 2008 Red Hat, Inc.
+-
+-   This program is free software; you can redistribute it and/or modify
+-   it under the terms of the GNU General Public License as published by
+-   the Free Software Foundation; either version 2, or (at your option)
+-   any later version.
+-
+-   This program is distributed in the hope that it will be useful,
+-   but WITHOUT ANY WARRANTY; without even the implied warranty of
+-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-   GNU General Public License for more details.
+-
+-   You should have received a copy of the GNU General Public License
+-   along with this program; if not, write to the Free Software
+-   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+-   02111-1307, USA.
+-*/
+-
+-#include <config.h>
+-
+-#include <unistd.h>
+-#include <stdlib.h>
+-#include <stdio.h>
+-#include <string.h>
+-
+-#include <glib/gi18n.h>
+-#include <gtk/gtk.h>
+-
+-#include <dbus/dbus-glib.h>
+-#include <dbus/dbus-glib-lowlevel.h>
+-
+-#define GSM_SERVICE_DBUS   "org.gnome.SessionManager"
+-#define GSM_PATH_DBUS      "/org/gnome/SessionManager"
+-#define GSM_INTERFACE_DBUS "org.gnome.SessionManager"
+-
+-enum {
+-        GSM_LOGOUT_MODE_NORMAL = 0,
+-        GSM_LOGOUT_MODE_NO_CONFIRMATION,
+-        GSM_LOGOUT_MODE_FORCE
+-};
+-
+-/* True if killing. This is deprecated, but we keep it for compatibility
+- * reasons. */
+-static gboolean kill_session = FALSE;
+-
+-/* The real options that should be used now. They are not ambiguous. */
+-static gboolean logout = FALSE;
+-static gboolean force_logout = FALSE;
+-static gboolean logout_dialog = FALSE;
+-static gboolean shutdown_dialog = FALSE;
+-
+-/* True if we should use dialog boxes */
+-static gboolean show_error_dialogs = FALSE;
+-
+-/* True if we should do the requested action without confirmation */
+-static gboolean no_interaction = FALSE;
+-
+-static char *session_name = NULL;
+-
+-static GOptionEntry options[] = {
+-        {"logout", '\0', 0, G_OPTION_ARG_NONE, &logout, N_("Log out"), NULL},
+-        {"force-logout", '\0', 0, G_OPTION_ARG_NONE, &force_logout, N_("Log out, ignoring any existing inhibitors"), NULL},
+-        {"logout-dialog", '\0', 0, G_OPTION_ARG_NONE, &logout_dialog, N_("Show logout dialog"), NULL},
+-        {"shutdown-dialog", '\0', 0, G_OPTION_ARG_NONE, &shutdown_dialog, N_("Show shutdown dialog"), NULL},
+-        {"gui",  '\0', 0, G_OPTION_ARG_NONE, &show_error_dialogs, N_("Use dialog boxes for errors"), NULL},
+-	/* deprecated options */
+-        {"session-name", 's', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_STRING, &session_name, N_("Set the current session name"), N_("NAME")},
+-        {"kill", '\0', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_NONE, &kill_session, N_("Kill session"), NULL},
+-        {"silent", '\0', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_NONE, &no_interaction, N_("Do not require confirmation"), NULL},
+-        {NULL}
+-};
+-
+-static void
+-display_error (const char *message)
+-{
+-        if (show_error_dialogs && !no_interaction) {
+-                GtkWidget *dialog;
+-
+-                dialog = gtk_message_dialog_new (NULL, 0, GTK_MESSAGE_ERROR,
+-                                                 GTK_BUTTONS_CLOSE,
+-                                                 "%s", message);
+-
+-                /*gtk_window_set_default_icon_name (GTK_STOCK_SAVE);*/
+-
+-                gtk_dialog_run (GTK_DIALOG (dialog));
+-                gtk_widget_destroy (dialog);
+-        } else {
+-                g_printerr ("%s\n", message);
+-        }
+-}
+-
+-static DBusGConnection *
+-get_session_bus (void)
+-{
+-        DBusGConnection *bus;
+-        GError *error = NULL;
+-
+-        bus = dbus_g_bus_get (DBUS_BUS_SESSION, &error);
+-
+-        if (bus == NULL) {
+-                g_warning ("Couldn't connect to session bus: %s", error->message);
+-                g_error_free (error);
+-        }
+-
+-        return bus;
+-}
+-
+-static DBusGProxy *
+-get_sm_proxy (void)
+-{
+-        DBusGConnection *connection;
+-        DBusGProxy      *sm_proxy;
+-
+-        connection = get_session_bus ();
+-        if (connection == NULL) {
+-                display_error (_("Could not connect to the session manager"));
+-                return NULL;
+-        }
+-
+-        sm_proxy = dbus_g_proxy_new_for_name (connection,
+-                                               GSM_SERVICE_DBUS,
+-                                               GSM_PATH_DBUS,
+-                                               GSM_INTERFACE_DBUS);
+-
+-        if (sm_proxy == NULL) {
+-                display_error (_("Could not connect to the session manager"));
+-                return NULL;
+-        }
+-
+-        return sm_proxy;
+-}
+-
+-#if 0
+-static void
+-set_session_name (const char  *session_name)
+-{
+-        DBusGProxy *sm_proxy;
+-        GError     *error;
+-        gboolean    res;
+-
+-        sm_proxy = get_sm_proxy ();
+-        if (sm_proxy == NULL) {
+-                return;
+-        }
+-
+-        error = NULL;
+-        res = dbus_g_proxy_call (sm_proxy,
+-                                 "SetName",
+-                                 &error,
+-                                 G_TYPE_STRING, session_name,
+-                                 G_TYPE_INVALID, G_TYPE_INVALID);
+-
+-        if (!res) {
+-                if (error != NULL) {
+-                        g_warning ("Failed to set session name '%s': %s",
+-                                   session_name, error->message);
+-                        g_error_free (error);
+-                } else {
+-                        g_warning ("Failed to set session name '%s'",
+-                                   session_name);
+-                }
+-        }
+-
+-        if (sm_proxy != NULL) {
+-                g_object_unref (sm_proxy);
+-        }
+-}
+-#endif
+-
+-static void
+-do_logout (unsigned int mode)
+-{
+-        DBusGProxy *sm_proxy;
+-        GError     *error;
+-        gboolean    res;
+-
+-        sm_proxy = get_sm_proxy ();
+-        if (sm_proxy == NULL) {
+-                return;
+-        }
+-
+-        error = NULL;
+-        res = dbus_g_proxy_call (sm_proxy,
+-                                 "Logout",
+-                                 &error,
+-                                 G_TYPE_UINT, mode,
+-                                 G_TYPE_INVALID,
+-                                 G_TYPE_INVALID);
+-
+-        if (!res) {
+-                if (error != NULL) {
+-                        g_warning ("Failed to call logout: %s",
+-                                   error->message);
+-                        g_error_free (error);
+-                } else {
+-                        g_warning ("Failed to call logout");
+-                }
+-        }
+-
+-        if (sm_proxy != NULL) {
+-                g_object_unref (sm_proxy);
+-        }
+-}
+-
+-static void
+-do_shutdown_dialog (void)
+-{
+-        DBusGProxy *sm_proxy;
+-        GError     *error;
+-        gboolean    res;
+-
+-        sm_proxy = get_sm_proxy ();
+-        if (sm_proxy == NULL) {
+-                return;
+-        }
+-
+-        error = NULL;
+-        res = dbus_g_proxy_call (sm_proxy,
+-                                 "Shutdown",
+-                                 &error,
+-                                 G_TYPE_INVALID,
+-                                 G_TYPE_INVALID);
+-
+-        if (!res) {
+-                if (error != NULL) {
+-                        g_warning ("Failed to call shutdown: %s",
+-                                   error->message);
+-                        g_error_free (error);
+-                } else {
+-                        g_warning ("Failed to call shutdown");
+-                }
+-        }
+-
+-        if (sm_proxy != NULL) {
+-                g_object_unref (sm_proxy);
+-        }
+-}
+-
+-int
+-main (int argc, char *argv[])
+-{
+-        GError *error;
+-        int     conflicting_options;
+-
+-        /* Initialize the i18n stuff */
+-        bindtextdomain (GETTEXT_PACKAGE, LOCALE_DIR);
+-        bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+-        textdomain (GETTEXT_PACKAGE);
+-
+-        error = NULL;
+-        if (! gtk_init_with_args (&argc, &argv, NULL, options, NULL, &error)) {
+-                g_warning ("Unable to start: %s", error->message);
+-                g_error_free (error);
+-                exit (1);
+-        }
+-
+-        conflicting_options = 0;
+-        if (kill_session)
+-                conflicting_options++;
+-        if (logout)
+-                conflicting_options++;
+-        if (force_logout)
+-                conflicting_options++;
+-        if (logout_dialog)
+-                conflicting_options++;
+-        if (shutdown_dialog)
+-                conflicting_options++;
+-        if (conflicting_options > 1)
+-                display_error (_("Program called with conflicting options"));
+-
+-        if (kill_session) {
+-                if (no_interaction)
+-                        force_logout = TRUE;
+-                else
+-                        logout_dialog = TRUE;
+-        }
+-
+-        if (logout) {
+-                do_logout (GSM_LOGOUT_MODE_NO_CONFIRMATION);
+-        } else if (force_logout) {
+-                do_logout (GSM_LOGOUT_MODE_FORCE);
+-        } else if (logout_dialog) {
+-                do_logout (GSM_LOGOUT_MODE_NORMAL);
+-        } else if (shutdown_dialog) {
+-                do_shutdown_dialog ();
+-        }
+-
+-        return 0;
+-}
+-- 
+1.7.4.1
+
