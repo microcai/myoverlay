@@ -13,12 +13,9 @@ HOMEPAGE="http://www.gnome.org/"
 LICENSE="GPL-2 LGPL-2 FDL-1.1"
 SLOT="0"
 IUSE="doc ipv6 elibc_FreeBSD"
-if [[ ${PV} = 9999 ]]; then
-	inherit gnome2-live
-	KEYWORDS=""
-else
-	KEYWORDS="~alpha ~amd64 ~arm ~ia64 ~ppc ~ppc64 ~sparc ~x86 ~x86-fbsd ~x86-freebsd ~amd64-linux ~x86-linux ~x86-solaris"
-fi
+
+inherit gnome2-live
+KEYWORDS="~alpha ~amd64 ~arm ~ia64 ~ppc ~ppc64 ~sparc ~x86 ~x86-fbsd ~x86-freebsd ~amd64-linux ~x86-linux ~x86-solaris"
 
 # x11-misc/xdg-user-dirs{,-gtk} are needed to create the various XDG_*_DIRs, and
 # create .config/user-dirs.dirs which is read by glib to get G_USER_DIRECTORY_*
@@ -61,8 +58,6 @@ DEPEND="${COMMON_DEPEND}
 # gnome-base/gdm does not provide gnome.desktop anymore
 
 src_prepare() {
-	EPATCH_OPTS="-p1"	epatch "${FILESDIR}/gnome-session-2.91.90.1-gnome-session-quit.patch"
-
 	# TODO: convert libnotify to a configure option
 	G2CONF="${G2CONF}
 		--disable-deprecation-flags
@@ -74,8 +69,6 @@ src_prepare() {
 		$(use_enable ipv6)"
 	DOCS="AUTHORS ChangeLog NEWS README"
 
-	// for gnome-shell-9999 runs.
-
 	# Add "session saving" button back, upstream bug #575544
 	# FIXME: Doesn't apply anymore
 #	epatch "${FILESDIR}/${PN}-2.32.0-session-saving-button.patch"
@@ -85,8 +78,6 @@ src_prepare() {
 #		eautoreconf
 #	fi
 
-	gnome2_src_prepare
-	eautoreconf
 	gnome2_src_prepare
 }
 
