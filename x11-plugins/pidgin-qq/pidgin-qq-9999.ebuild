@@ -39,6 +39,5 @@ src_configure() {
 }
 
 src_install() {
-	make install DESTDIR="${D}" || die "Install failed"
-	dodoc CHANGELOG INSTALL NOTES README TODO VERSION WISHLIST
+	emake DESTDIR="${D}" install  || die "Install failed"
 }
