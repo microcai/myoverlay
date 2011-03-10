@@ -1,0 +1,27 @@
+From 4e5fa162e0ee1680c59bbb25528b5f5243edbf50 Mon Sep 17 00:00:00 2001
+From: microcai <microcai@fedoraproject.org>
+Date: Thu, 10 Mar 2011 22:56:17 +0800
+Subject: [PATCH] fix date utf-8 decode problem
+
+---
+ js/ui/dateMenu.js |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/js/ui/dateMenu.js b/js/ui/dateMenu.js
+index ad2c112..20e6820 100644
+--- a/js/ui/dateMenu.js
++++ b/js/ui/dateMenu.js
+@@ -206,8 +206,8 @@ DateMenuButton.prototype = {
+         /* Translators: This is the date format to use when the calendar popup is
+          * shown - it is shown just below the time in the shell (e.g. "Tue 9:29 AM").
+          */
+-        dateFormat = _("%A %B %e, %Y");
+-        this._date.set_text(displayDate.toLocaleFormat(dateFormat));
++// /       dateFormat = _("%A %B %e, %Y");
++//       this._date.set_text(displayDate.toLocaleFormat(dateFormat));
+ 
+         Mainloop.timeout_add(msecRemaining, Lang.bind(this, this._updateClockAndDate));
+         return false;
+-- 
+1.7.4.1
+
