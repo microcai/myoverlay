@@ -1,0 +1,25 @@
+From 220149c9098687a35d046bf804956088d2aab2d7 Mon Sep 17 00:00:00 2001
+From: microcai <microcai@fedoraproject.org>
+Date: Fri, 11 Mar 2011 13:26:11 +0800
+Subject: [PATCH] fix gtk3 build error
+
+---
+ src/Makefile.in |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/src/Makefile.in b/src/Makefile.in
+index fd92edd..9e8019f 100644
+--- a/src/Makefile.in
++++ b/src/Makefile.in
+@@ -225,7 +225,7 @@ GMOFILES = @GMOFILES@
+ GMSGFMT = @GMSGFMT@
+ GREP = @GREP@
+ GTK_BUILDER_CONVERT = @GTK_BUILDER_CONVERT@
+-GTK_BUILDER_CONVERT_FLAGS = @GTK_BUILDER_CONVERT_FLAGS@
++GTK_BUILDER_CONVERT_FLAGS =
+ HELP_DIR = @HELP_DIR@
+ INSTALL = @INSTALL@
+ INSTALL_DATA = @INSTALL_DATA@
+-- 
+1.7.4.1
+
