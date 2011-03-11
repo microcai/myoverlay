@@ -115,7 +115,7 @@ pkg_postinst() {
 	use gtk && update_gtk_immodules
 	use python && python_mod_optimize /usr/share/${PN}
 	gnome2_icon_cache_update
-	use gtk3 && gtk-query-immodules-3.0 > ${D}/usr/lib/gtk-3.0/3.0.0/immodules.cache
+	use gtk3 && gtk-query-immodules-3.0 > /usr/lib/gtk-3.0/3.0.0/immodules.cache
 
 	elog "To use ibus, you should:"
 	elog "1. Get input engines from sunrise overlay."
@@ -139,5 +139,5 @@ pkg_postrm() {
 	use gtk && update_gtk_immodules
 	use python && python_mod_cleanup /usr/share/${PN}
 	gnome2_icon_cache_update
-	use gtk3 && gtk-query-immodules-3.0 > ${D}/usr/lib/gtk-3.0/3.0.0/immodules.cache
+	use gtk3 && gtk-query-immodules-3.0 > /usr/lib/gtk-3.0/3.0.0/immodules.cache
 }
