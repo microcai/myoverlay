@@ -1,6 +1,6 @@
 # Copyright 1999-2011 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/x11-drivers/nvidia-drivers/nvidia-drivers-270.18.ebuild,v 1.1 2011/01/24 18:13:43 cardoe Exp $
+# $Header: /var/cvsroot/gentoo-x86/x11-drivers/nvidia-drivers/nvidia-drivers-260.19.36.ebuild,v 1.2 2011/03/07 09:32:02 hwoarang Exp $
 
 EAPI="2"
 
@@ -12,16 +12,16 @@ X86_FBSD_NV_PACKAGE="NVIDIA-FreeBSD-x86-${PV}"
 
 DESCRIPTION="NVIDIA X11 driver and GLX libraries"
 HOMEPAGE="http://www.nvidia.com/"
-SRC_URI="amd64? ( http://us.download.nvidia.com/XFree86/Linux-x86_64/${PV}/${AMD64_NV_PACKAGE}.run )"
+SRC_URI="http://us.download.nvidia.com/XFree86/Linux-x86_64/${PV}/${AMD64_NV_PACKAGE}.run"
 
-KEYWORDS="~amd64"
 LICENSE="NVIDIA"
 SLOT="0"
+KEYWORDS="-* amd64 ~x86 ~x86-fbsd"
 IUSE="acpi custom-cflags gtk multilib kernel_linux"
 RESTRICT="strip"
 EMULTILIB_PKG="true"
 
-COMMON="<x11-base/xorg-server-1.10.99
+COMMON="<x11-base/xorg-server-1.9.99
 	kernel_linux? ( >=sys-libs/glibc-2.6.1 )
 	multilib? ( app-emulation/emul-linux-x86-xlibs )
 	>=app-admin/eselect-opengl-1.0.9
@@ -42,7 +42,6 @@ QA_TEXTRELS_x86="usr/lib/opengl/nvidia/lib/libnvidia-tls.so.${PV}
 	usr/lib/xorg/modules/drivers/nvidia_drv.so
 	usr/lib/libcuda.so.${PV}
 	usr/lib/libnvidia-cfg.so.${PV}
-	usr/lib/libnvidia-ml.so.${PV}
 	usr/lib/libvdpau_nvidia.so.${PV}
 	usr/lib/libOpenCL.so.1.0.0
 	usr/lib/libnvidia-compiler.so.${PV}"
@@ -51,7 +50,6 @@ QA_TEXTRELS_x86_fbsd="boot/modules/nvidia.ko
 	usr/lib/opengl/nvidia/lib/libGL.so.1
 	usr/lib/libnvidia-glcore.so.1
 	usr/lib/libnvidia-cfg.so.1
-	usr/lib/libnvidia-ml.so.1
 	usr/lib/opengl/nvidia/extensions/libglx.so.1
 	usr/lib/xorg/modules/drivers/nvidia_drv.so"
 
@@ -83,7 +81,6 @@ QA_EXECSTACK_amd64="usr/lib32/libnvidia-glcore.so.${PV}
 	usr/lib64/libnvidia-compiler.so.${PV}
 	usr/lib64/libXvMCNVIDIA.a:NVXVMC.o
 	usr/lib64/libnvidia-cfg.so.${PV}
-	usr/lib64/libnvidia-ml.so.${PV}
 	usr/lib64/libvdpau_nvidia.so.${PV}
 	usr/lib64/opengl/nvidia/lib/libnvidia-tls.so.${PV}
 	usr/lib64/opengl/nvidia/lib/libGL.so.${PV}
@@ -126,7 +123,6 @@ QA_DT_HASH_amd64="usr/lib32/libcuda.so.${PV}
 	usr/lib64/libcuda.so.${PV}
 	usr/lib64/libnvidia-cfg.so.${PV}
 	usr/lib64/libnvidia-glcore.so.${PV}
-	usr/lib64/libnvidia-ml.so.${PV}
 	usr/lib64/opengl/nvidia/lib/libGL.so.${PV}
 	usr/lib64/opengl/nvidia/lib/libnvidia-tls.so.${PV}
 	usr/lib64/opengl/nvidia/extensions/libglx.so.${PV}
@@ -142,7 +138,6 @@ QA_DT_HASH_amd64="usr/lib32/libcuda.so.${PV}
 QA_DT_HASH_x86="usr/lib/libcuda.so.${PV}
 	usr/lib/libnvidia-cfg.so.${PV}
 	usr/lib/libnvidia-glcore.so.${PV}
-	usr/lib/libnvidia-ml.so.${PV}
 	usr/lib/opengl/nvidia/lib/libGL.so.${PV}
 	usr/lib/opengl/nvidia/lib/libnvidia-tls.so.${PV}
 	usr/lib/opengl/nvidia/extensions/libglx.so.${PV}
@@ -302,43 +297,12 @@ src_compile() {
 }
 
 src_install() {
-	if use kernel_linux; then
-		linux-mod_src_install
-
-		VIDEOGROUP="$(egetent group video | cut -d ':' -f 3)"
-		if [ -z "$VIDEOGROUP" ]; then
-			eerror "Failed to determine the video group gid."
-			die "Failed to determine the video group gid."
-		fi
-
-		# Add the aliases
-		[ -f "${FILESDIR}/nvidia-169.07" ] || die "nvidia missing in FILESDIR"
-		sed -e 's:PACKAGE:'${PF}':g' \
-			-e 's:VIDEOGID:'${VIDEOGROUP}':' "${FILESDIR}"/nvidia-169.07 > \
-			"${WORKDIR}"/nvidia
-		insinto /etc/modprobe.d
-		newins "${WORKDIR}"/nvidia nvidia.conf || die
-	elif use x86-fbsd; then
-		insinto /boot/modules
-		doins "${WORKDIR}/${NV_PACKAGE}/src/nvidia.kld" || die
-
-		exeinto /boot/modules
-		doexe "${WORKDIR}/${NV_PACKAGE}/src/nvidia.ko" || die
-	fi
-
 	# NVIDIA kernel <-> userspace driver config lib
 	dolib.so ${NV_LIB}/libnvidia-cfg.so.${NV_SOVER} || \
 		die "failed to install libnvidia-cfg"
 	dosym /usr/$(get_libdir)/libnvidia-cfg.so.${NV_SOVER} \
 		/usr/$(get_libdir)/libnvidia-cfg.so || \
 		die "failed to create libnvidia-cfg.so symlink"
-
-	# NVIDIA monitoring library
-	dolib.so ${NV_LIB}/libnvidia-ml.so.${NV_SOVER} || \
-		die "failed to install libnvidia-ml"
-	dosym /usr/$(get_libdir)/libnvidia-ml.so.${NV_SOVER} \
-		/usr/$(get_libdir)/libnvidia-ml.so || \
-		die "failed to create libnvidia-ml.so symlink"
 
 	# NVIDIA video decode <-> CUDA
 	dolib.so ${NV_LIB}/libnvcuvid.so.${NV_SOVER} || \
@@ -478,10 +442,6 @@ src_install-libs() {
 }
 
 pkg_preinst() {
-	if use kernel_linux; then
-		linux-mod_pkg_postinst
-	fi
-
 	# Clean the dynamic libGL stuff's home to ensure
 	# we dont have stale libs floating around
 	if [ -d "${ROOT}"/usr/lib/opengl/nvidia ] ; then
@@ -494,10 +454,6 @@ pkg_preinst() {
 }
 
 pkg_postinst() {
-	if use kernel_linux; then
-		linux-mod_pkg_postinst
-	fi
-
 	# Switch to the nvidia implementation
 	eselect opengl set --use-old nvidia
 
@@ -532,8 +488,5 @@ pkg_postinst() {
 }
 
 pkg_postrm() {
-	if use kernel_linux; then
-		linux-mod_pkg_postrm
-	fi
 	eselect opengl set --use-old xorg-x11
 }
