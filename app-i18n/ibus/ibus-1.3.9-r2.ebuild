@@ -139,5 +139,6 @@ pkg_postrm() {
 	use gtk && update_gtk_immodules
 	use python && python_mod_cleanup /usr/share/${PN}
 	gnome2_icon_cache_update
+	use gtk3 && rm /usr/lib/gtk-3.0/3.0.0/immodules/im-xim.so
 	use gtk3 && gtk-query-immodules-3.0 > /usr/lib/gtk-3.0/3.0.0/immodules.cache
 }
