@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE repositories SYSTEM "/dtd/repositories.dtd">
+<repositories xmlns="" version="1.0">
+  <repo quality="experimental" status="unofficial">
+    <name>microcairepo</name>
+    <description>hack ebuilds of misc packages</description>
+    <homepage>http://github.com/microcai/myoverlay</homepage>
+    <owner type="project">
+      <email>microcaicai@gmail.com</email>
+      <name>microcaioverlay</name>
+    </owner>
+    <source type="git">git://github.com/microcai/myoverlay.git</source>
+  </repo>
+</repositories>
