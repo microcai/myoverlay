@@ -93,7 +93,7 @@ src_prepare() {
 	fi
 
 	epatch "${FILESDIR}/${PN}-fix-gnome-bluetooth.patch"
-	EPATCH_OPTS="-p1" epatch "${FILESDIR}/${PN}-fix-date-utf-8-decode-problem.patch"
+##	EPATCH_OPTS="-p1" epatch "${FILESDIR}/${PN}-fix-date-utf-8-decode-problem.patch"
 	gnome2_src_prepare
 }
 
