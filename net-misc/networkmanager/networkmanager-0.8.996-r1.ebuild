@@ -87,6 +87,7 @@ pkg_setup() {
 src_prepare() {
 	# disable tests
 	epatch "${FILESDIR}/${PN}-fix-tests.patch"
+	epatch "${FILESDIR}/${P}-fix-introspection.patch"
 	EPATCH_SOURCE="${WORKDIR}/ifnet-0.9" EPATCH_SUFFIX="diff" EPATCH_FORCE="yes" epatch
 
 	eautoreconf
