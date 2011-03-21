@@ -1,0 +1,153 @@
+--- src/afsocket.c
++++ src/afsocket.c	2010/12/10 16:49:25
+@@ -529,6 +529,16 @@ afsocket_sd_init(LogPipe *s)
+   gboolean res = FALSE;
+   GlobalConfig *cfg = log_pipe_get_config(s);
+ 
++  if (self->systemd_sock != -1)
++    {
++      /* TODO: another socket types */
++      if ((self->bind_addr->sa.sa_family != AF_UNIX) || !(self->flags & AFSOCKET_DGRAM))
++        {
++          msg_error("Systemd activation implemented for unix datagram sockets only", NULL);
++          return FALSE;
++        }
++    }
++
+ #if ENABLE_SSL
+   if (self->flags & AFSOCKET_REQUIRE_TLS && !self->tls_context)
+     {
+@@ -604,14 +614,22 @@ afsocket_sd_init(LogPipe *s)
+     {
+       if (!self->connections)
+         {
+-          if (!afsocket_open_socket(self->bind_addr, !!(self->flags & AFSOCKET_STREAM), &sock))
++          if (self->systemd_sock != -1)
++            {
++	      sock = self->systemd_sock;
++              g_fd_set_nonblock(sock, TRUE);
++              self->bind_addr->sa_funcs->sa_bind = NULL;
++              self->bind_addr->sa_funcs->sa_bind_prepare = NULL;
++            }
++          else if (!afsocket_open_socket(self->bind_addr, !!(self->flags & AFSOCKET_STREAM), &sock))
+             return self->super.optional;
+         }
+       self->fd = -1;
+ 
+       if (!self->setup_socket(self, sock))
+         {
+-          close(sock);
++          if (self->systemd_sock != -1)
++            close(sock);
+           return FALSE;
+         }
+ 
+@@ -738,6 +756,7 @@ afsocket_sd_init_instance(AFSocketSource
+   self->setup_socket = afsocket_sd_setup_socket;
+   self->max_connections = 10;
+   self->listen_backlog = 255;
++  self->systemd_sock = -1;
+   self->flags = flags | AFSOCKET_KEEP_ALIVE;
+   log_reader_options_defaults(&self->reader_options);
+ 
+--- src/afsocket.h
++++ src/afsocket.h	2010/12/10 16:16:57
+@@ -77,6 +77,7 @@ struct _AFSocketSourceDriver
+   GList *connections;
+   SocketOptions *sock_options_ptr;
+   gboolean (*setup_socket)(AFSocketSourceDriver *s, gint fd);
++  gint systemd_sock;
+ };
+ 
+ void afsocket_sd_set_keep_alive(LogDriver *self, gint enable);
+--- src/afunix.c
++++ src/afunix.c	2010/12/10 16:49:37
+@@ -25,6 +25,7 @@
+ #include "misc.h"
+ #include "messages.h"
+ #include "gprocess.h"
++#include "sd-daemon.h"
+ 
+ #include <sys/types.h>
+ #include <sys/socket.h>
+@@ -67,6 +68,29 @@ afunix_sd_init(LogPipe *s)
+ {
+   AFUnixSourceDriver *self = (AFUnixSourceDriver *) s;
+   cap_t saved_caps;
++  int fds, fd, t, r;
++
++  fds = sd_listen_fds(0);
++  if (fds < 0)
++    {
++      msg_error("Failed to acquire systemd sockets", NULL);
++      return FALSE;
++    }
++  else if (fds > 0)
++    {
++      fd = SD_LISTEN_FDS_START;
++      for (fd = SD_LISTEN_FDS_START; fd < SD_LISTEN_FDS_START + fds; fd++)
++        {
++          t = (self->super.flags & AFSOCKET_STREAM) ? SOCK_STREAM : SOCK_DGRAM;
++          r = sd_is_socket_unix(fd, t, -1, self->filename, 0);
++          if (r == 1)
++            {
++              /* OK, remember this systemd socket */
++              self->super.systemd_sock = fd;
++              break;
++            }
++        }
++    }
+ 
+   if (afsocket_sd_init(s))
+     {
+@@ -83,9 +107,27 @@ afunix_sd_init(LogPipe *s)
+       if (self->perm >= 0)
+         chmod(self->filename, (mode_t) self->perm);
+       g_process_cap_restore(saved_caps);
++
++      if (self->super.systemd_sock != -1)
++        {
++          msg_verbose("Acquired systemd socket",
++                      evt_tag_int("systemd-sock-fd", fd),
++                      evt_tag_str("systemd-sock-name", self->filename),
++                      NULL);
++        }
+       return TRUE;
+     }
+-  return FALSE;
++  else
++    {
++      if (self->super.systemd_sock != -1)
++        {
++          msg_error("Failed to acquire systemd socket",
++                    evt_tag_int("systemd-sock-fd", fd),
++                    evt_tag_str("systemd-sock-name", self->filename),
++                    NULL);
++        }
++      return FALSE;
++    }
+ }
+ 
+ static void
+--- src/Makefile.am
++++ src/Makefile.am	2010/12/06 16:55:15
+@@ -7,7 +7,8 @@ noinst_DATA = libafsocket.la
+ libafsocket_notls_la_SOURCES = \
+ 	afsocket.c afsocket.h afunix.c afunix.h afinet.c afinet.h \
+ 	tlscontext.c tlscontext.h tlstransport.c tlstransport.h \
+-	afsocket-grammar.y afsocket-parser.c afsocket-parser.h afsocket-plugin.c
++	afsocket-grammar.y afsocket-parser.c afsocket-parser.h afsocket-plugin.c \
++	sd-daemon.c sd-daemon.h
+ libafsocket_notls_la_CPPFLAGS = $(AM_CPPFLAGS)
+ libafsocket_notls_la_LIBADD = ../../lib/libsyslog-ng.la $(LIBNET_LIBS) $(LIBWRAP_LIBS)
+ libafsocket_notls_la_LDFLAGS = -avoid-version
+@@ -17,7 +18,8 @@ module_LTLIBRARIES += libafsocket-tls.la
+ libafsocket_tls_la_SOURCES = \
+ 	afsocket.c afsocket.h afunix.c afunix.h afinet.c afinet.h \
+ 	tlscontext.c tlscontext.h tlstransport.c tlstransport.h \
+-	afsocket-grammar.y afsocket-parser.c afsocket-parser.h afsocket-plugin.c
++	afsocket-grammar.y afsocket-parser.c afsocket-parser.h afsocket-plugin.c \
++	sd-daemon.c sd-daemon.h
+ libafsocket_tls_la_CPPFLAGS = $(AM_CPPFLAGS) -DENABLE_SSL=1
+ libafsocket_tls_la_LIBADD = ../../lib/libsyslog-ng.la $(OPENSSL_LIBS) $(ZLIB_LIBS) $(LIBNET_LIBS) $(LIBWRAP_LIBS)
+ libafsocket_tls_la_LDFLAGS = -avoid-version
