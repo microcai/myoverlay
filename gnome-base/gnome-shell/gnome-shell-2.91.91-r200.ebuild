@@ -13,7 +13,7 @@ HOMEPAGE="http://live.gnome.org/GnomeShell"
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="nm-applet"
+IUSE="nm-applet fixautorestart"
 inherit gnome2-live
 KEYWORDS="~amd64 ~x86"
 
@@ -23,10 +23,10 @@ KEYWORDS="~amd64 ~x86"
 # latest gsettings-desktop-schemas is needed due to commit 602fa1c6
 COMMON_DEPEND=">=dev-libs/glib-2.25.9
 	>=dev-libs/gjs-0.7.11
-	>=dev-libs/gobject-introspection-0.10.1
+	>=dev-libs/gobject-introspection-0.10.3
 	x11-libs/gdk-pixbuf:2[introspection]
 	>=x11-libs/gtk+-3.0.0:3[introspection]
-	>=media-libs/clutter-1.5.15[introspection]
+	>=media-libs/clutter-1.6.6[introspection]
 	>=gnome-base/gnome-desktop-2.91.2:3
 	>=gnome-base/gsettings-desktop-schemas-0.1.7.1
 	>=gnome-extra/evolution-data-server-2.91.6
@@ -51,9 +51,8 @@ COMMON_DEPEND=">=dev-libs/glib-2.25.9
 
 	x11-libs/startup-notification
 	x11-libs/libXfixes
-	x11-apps/mesa-progs
 	
-	nm-applet? ( >=net-misc/networkmanager-9999[introspection] )"
+	net-misc/networkmanager[introspection]"
 # Runtime-only deps are probably incomplete and approximate.
 # Each block:
 # 1. Introspection stuff + dconf needed via imports.gi.*
@@ -69,9 +68,7 @@ RDEPEND="${COMMON_DEPEND}
 	>=gnome-base/gnome-session-2.91.91
 
 	>=gnome-base/gnome-settings-daemon-2.91
-	>=gnome-base/gnome-control-center-2.91
-
-	nm-applet? ( >=gnome-extra/nm-applet-9999 )"
+	>=gnome-base/gnome-control-center-2.91"
 DEPEND="${COMMON_DEPEND}
 	sys-devel/gettext
 	>=dev-util/pkgconfig-0.22
@@ -93,11 +90,13 @@ src_prepare() {
 	fi
 
 	epatch "${FILESDIR}/${PN}-fix-gnome-bluetooth.patch"
+	use fixautorestart && 	epatch "${FILESDIR}/${PN}-autorestart.patch"
 ##	EPATCH_OPTS="-p1" epatch "${FILESDIR}/${PN}-fix-date-utf-8-decode-problem.patch"
 	gnome2_src_prepare
 }
 
 pkg_postinst() {
+	use fixautorestart && ( cp "${FILESDIR}/gnome-shell.sh" /usr/bin/ || die )
 	if ! has_version '>=media-libs/gst-plugins-good-0.10.23' || \
 	   ! has_version 'media-plugins/gst-plugins-vp8'; then
 		ewarn "To make use of GNOME Shell's built-in screen recording utility,"

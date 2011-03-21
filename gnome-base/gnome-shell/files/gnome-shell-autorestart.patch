@@ -1,0 +1,25 @@
+From 4bba02d1628de3d57c3c374342a5b1c60712cec6 Mon Sep 17 00:00:00 2001
+From: microcai <microcai@fedoraproject.org>
+Date: Tue, 22 Mar 2011 01:03:57 +0800
+Subject: [PATCH] desktop fix
+
+---
+ data/gnome-shell.desktop.in.in |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/data/gnome-shell.desktop.in.in b/data/gnome-shell.desktop.in.in
+index e64364a..6922aaf 100644
+--- a/data/gnome-shell.desktop.in.in
++++ b/data/gnome-shell.desktop.in.in
+@@ -2,7 +2,7 @@
+ Type=Application
+ _Name=GNOME Shell
+ _Comment=Window management and application launching
+-Exec=@bindir@/gnome-shell
++Exec=@bindir@/gnome-shell.sh 
+ X-GNOME-Bugzilla-Bugzilla=GNOME
+ X-GNOME-Bugzilla-Product=gnome-shell
+ X-GNOME-Bugzilla-Component=general
+-- 
+1.7.4.1
+
