@@ -13,30 +13,30 @@ HOMEPAGE="http://live.gnome.org/GnomeShell"
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="nm-applet fixautorestart"
+IUSE="+nm-applet fixautorestart"
 inherit gnome2-live
 KEYWORDS="~amd64 ~x86"
 
 # gnome-desktop-2.91.2 is needed due to header changes, db82a33 in gnome-desktop
 # FIXME: Automagic gnome-bluetooth[introspection] support.
-# latest mutter is needed due to commit 474ff2e997
+# latest mutter is needed due to commit 474ff2e9 and commit 079953c3
 # latest gsettings-desktop-schemas is needed due to commit 602fa1c6
-COMMON_DEPEND=">=dev-libs/glib-2.25.9
+COMMON_DEPEND=">=dev-libs/glib-2.25.9:2
 	>=dev-libs/gjs-0.7.11
-	>=dev-libs/gobject-introspection-0.10.3
+	>=dev-libs/gobject-introspection-0.10.1
 	x11-libs/gdk-pixbuf:2[introspection]
 	>=x11-libs/gtk+-3.0.0:3[introspection]
-	>=media-libs/clutter-1.6.6[introspection]
+	>=media-libs/clutter-1.5.15:1.0[introspection]
 	>=gnome-base/gnome-desktop-2.91.2:3
-	>=gnome-base/gsettings-desktop-schemas-0.1.7.1
+	>=gnome-base/gsettings-desktop-schemas-2.91.91
 	>=gnome-extra/evolution-data-server-2.91.6
 	>=media-libs/gstreamer-0.10.16
 	>=media-libs/gst-plugins-base-0.10.16
+	>=net-im/telepathy-logger-0.2.4[introspection]
 	>=net-libs/telepathy-glib-0.13.12[introspection]
 	>=net-wireless/gnome-bluetooth-2.90.0[introspection]
 	>=sys-auth/polkit-0.100[introspection]
-	>=x11-wm/mutter-2.91.91[introspection]
-	>=net-im/telepathy-logger-0.2.5[introspection]
+	>=x11-wm/mutter-2.91.91.1[introspection]
 
 	dev-libs/dbus-glib
 	dev-libs/libxml2:2
@@ -51,24 +51,29 @@ COMMON_DEPEND=">=dev-libs/glib-2.25.9
 
 	x11-libs/startup-notification
 	x11-libs/libXfixes
-	
-	net-misc/networkmanager[introspection]"
+	x11-apps/mesa-progs"
 # Runtime-only deps are probably incomplete and approximate.
 # Each block:
-# 1. Introspection stuff + dconf needed via imports.gi.*
-# 2. gnome-session is needed for gnome-session-quit
-# 3. Don't remember
-# 4. nm-applet is needed for auth prompting and the wireless connection dialog
+# 1. Pull in polkit-0.101 for pretty authorization dialogs
+# 2. Introspection stuff + dconf needed via imports.gi.*
+# 3. gnome-session is needed for gnome-session-quit
+# 4. Control shell settings
+# 5. nm-applet is needed for auth prompting and the wireless connection dialog
 RDEPEND="${COMMON_DEPEND}
+	>=sys-auth/polkit-0.101[introspection]
 
 	>=gnome-base/dconf-0.4.1
 	>=gnome-base/libgnomekbd-2.91.4[introspection]
 	sys-power/upower[introspection]
-	
+
 	>=gnome-base/gnome-session-2.91.91
 
 	>=gnome-base/gnome-settings-daemon-2.91
-	>=gnome-base/gnome-control-center-2.91"
+	>=gnome-base/gnome-control-center-2.91
+
+	nm-applet? (
+		>=gnome-extra/nm-applet-0.8.996
+		>=net-misc/networkmanager-0.8.996-r1[introspection] )"
 DEPEND="${COMMON_DEPEND}
 	sys-devel/gettext
 	>=dev-util/pkgconfig-0.22
@@ -81,22 +86,18 @@ G2CONF="--enable-compile-warnings=maximum
 --disable-jhbuild-wrapper-script"
 
 src_prepare() {
-	if use nm-applet; then
-		# See https://bugzilla.gnome.org/show_bug.cgi?id=621707"
-		ewarn "Adding support for the experimental NetworkManager applet."
-		ewarn "This needs the latest NetworkManager & nm-applet trunk."
-		ewarn "Report bugs about this to 'nirbheek' on #gentoo-desktop @ FreeNode."
-		epatch "${FILESDIR}/${PN}-experimental-nm-applet-1.2.patch"
-	fi
-
 	epatch "${FILESDIR}/${PN}-fix-gnome-bluetooth.patch"
+
 	use fixautorestart && 	epatch "${FILESDIR}/${PN}-autorestart.patch"
-##	EPATCH_OPTS="-p1" epatch "${FILESDIR}/${PN}-fix-date-utf-8-decode-problem.patch"
+
 	gnome2_src_prepare
 }
 
 pkg_postinst() {
+	gnome2_pkg_postinst
+
 	use fixautorestart && ( cp "${FILESDIR}/gnome-shell.sh" /usr/bin/ || die )
+
 	if ! has_version '>=media-libs/gst-plugins-good-0.10.23' || \
 	   ! has_version 'media-plugins/gst-plugins-vp8'; then
 		ewarn "To make use of GNOME Shell's built-in screen recording utility,"
