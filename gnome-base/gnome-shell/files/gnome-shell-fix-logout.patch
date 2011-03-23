@@ -1,94 +1,17 @@
-From d047499a0ca9445fd5b243d80f3f9dcbde3957d6 Mon Sep 17 00:00:00 2001
+From 27436201464c6eca356b2482b3edfe5ab37aaefe Mon Sep 17 00:00:00 2001
 From: microcai <microcai@fedoraproject.org>
-Date: Thu, 24 Mar 2011 01:13:27 +0800
-Subject: [PATCH] Revert "endSessionDialog: make shutdown dialog work like latest mock ups"
+Date: Thu, 24 Mar 2011 01:49:12 +0800
+Subject: [PATCH] fix logout problem
 
-This reverts commit dba02f8f08c7c0499d0c7e4869e95b4c58ea4c90.
 ---
- js/ui/endSessionDialog.js |   55 ++++++++++++++++++---------------------------
- 1 files changed, 22 insertions(+), 33 deletions(-)
+ js/ui/endSessionDialog.js |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
 
 diff --git a/js/ui/endSessionDialog.js b/js/ui/endSessionDialog.js
-index c019e2a..f221d7e 100644
+index c019e2a..3d773e6 100644
 --- a/js/ui/endSessionDialog.js
 +++ b/js/ui/endSessionDialog.js
-@@ -66,20 +66,16 @@ const logoutDialogContent = {
-     uninhibitedDescriptionWithUser: _("%s will be logged out automatically in %d seconds."),
-     uninhibitedDescription: _("You will be logged out automatically in %d seconds."),
-     endDescription: _("Logging out of the system."),
--    confirmButtons: [{ signal: 'ConfirmedLogout',
--                       label:  _("Log Out") }],
-+    confirmButtonText: _("Log Out"),
-     iconStyleClass: 'end-session-dialog-logout-icon'
- };
- 
- const shutdownDialogContent = {
--    subject: _("Power Off"),
--    inhibitedDescription: _("Click Power Off to quit these applications and power off the system."),
--    uninhibitedDescription: _("The system will power off automatically in %d seconds."),
--    endDescription: _("Powering off the system."),
--    confirmButtons: [{ signal: 'ConfirmedReboot',
--                       label:  _("Restart") },
--                     { signal: 'ConfirmedShutdown',
--                       label:  _("Power Off") }],
-+    subject: _("Shut Down"),
-+    inhibitedDescription: _("Click Shut Down to quit these applications and shut down the system."),
-+    uninhibitedDescription: _("The system will shut down automatically in %d seconds."),
-+    endDescription: _("Shutting down the system."),
-+    confirmButtonText: _("Shut Down"),
-     iconName: 'system-shutdown',
-     iconStyleClass: 'end-session-dialog-shutdown-icon'
- };
-@@ -89,8 +85,7 @@ const restartDialogContent = {
-     inhibitedDescription: _("Click Restart to quit these applications and restart the system."),
-     uninhibitedDescription: _("The system will restart automatically in %d seconds."),
-     endDescription: _("Restarting the system."),
--    confirmButtons: [{ signal: 'ConfirmedReboot',
--                       label:  _("Restart") }],
-+    confirmButtonText: _("Restart"),
-     iconName: 'system-shutdown',
-     iconStyleClass: 'end-session-dialog-shutdown-icon'
- };
-@@ -411,20 +406,18 @@ EndSessionDialog.prototype = {
-             return;
- 
-         let dialogContent = DialogContent[this._type];
--        let buttons = [{ action: Lang.bind(this, this.cancel),
--                         label:  _("Cancel"),
--                         key:    Clutter.Escape }];
--
--        for (let i = 0; i < dialogContent.confirmButtons.length; i++) {
--            let signal = dialogContent.confirmButtons[i].signal;
--            let label = dialogContent.confirmButtons[i].label;
--            buttons.push({ action: Lang.bind(this, function() {
--                                       this._confirm(signal);
--                                   }),
--                           label: label });
--        }
--
--        this.setButtons(buttons);
-+        let confirmButtonText = _("Confirm");
-+
-+        if (dialogContent.confirmButtonText)
-+            confirmButtonText = dialogContent.confirmButtonText;
-+
-+        this.setButtons([{ label: _("Cancel"),
-+                           action: Lang.bind(this, this.cancel),
-+                           key:    Clutter.Escape
-+                         },
-+                         { label:  confirmButtonText,
-+                           action: Lang.bind(this, this._confirm)
-+                         }]);
-     },
- 
-     close: function() {
-@@ -442,12 +435,12 @@ EndSessionDialog.prototype = {
-         this.close(global.get_current_time());
-     },
- 
--    _confirm: function(signal) {
-+    _confirm: function() {
-         this._fadeOutDialog();
+@@ -447,7 +447,7 @@ EndSessionDialog.prototype = {
          this._stopTimer();
          DBus.session.emit_signal('/org/gnome/SessionManager/EndSessionDialog',
                                   'org.gnome.SessionManager.EndSessionDialog',
@@ -97,19 +20,6 @@ index c019e2a..f221d7e 100644
      },
  
      _onOpened: function() {
-@@ -462,11 +455,7 @@ EndSessionDialog.prototype = {
-                            time: this._secondsLeft,
-                            transition: 'linear',
-                            onUpdate: Lang.bind(this, this._updateContent),
--                           onComplete: Lang.bind(this, function() {
--                                           let dialogContent = DialogContent[this._type];
--                                           let button = dialogContent.confirmButtons[dialogContent.confirmButtons.length - 1];
--                                           this._confirm(button.signal);
--                                       }),
-+                           onComplete: Lang.bind(this, this._confirm),
-                          });
-     },
- 
 -- 
 1.7.4.1
 
