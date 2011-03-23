@@ -13,7 +13,7 @@ HOMEPAGE="http://live.gnome.org/GnomeShell"
 
 LICENSE="GPL-2"
 SLOT="0"
-IUSE="+nm-applet fixautorestart"
+IUSE=""
 inherit gnome2-live
 KEYWORDS="~amd64 ~x86"
 
@@ -70,10 +70,8 @@ RDEPEND="${COMMON_DEPEND}
 
 	>=gnome-base/gnome-settings-daemon-2.91
 	>=gnome-base/gnome-control-center-2.91
-
-	nm-applet? (
-		>=gnome-extra/nm-applet-0.8.996
-		>=net-misc/networkmanager-0.8.996-r1[introspection] )"
+	>=gnome-extra/nm-applet-0.8.996
+	>=net-misc/networkmanager-0.8.996-r1[introspection] "
 DEPEND="${COMMON_DEPEND}
 	sys-devel/gettext
 	>=dev-util/pkgconfig-0.22
@@ -87,16 +85,13 @@ G2CONF="--enable-compile-warnings=maximum
 
 src_prepare() {
 	epatch "${FILESDIR}/${PN}-fix-gnome-bluetooth.patch"
-
-	use fixautorestart && 	epatch "${FILESDIR}/${PN}-autorestart.patch"
+	epatch "${FILESDIR}/${PN}-fix-logout.patch"
 
 	gnome2_src_prepare
 }
 
 pkg_postinst() {
 	gnome2_pkg_postinst
-
-	use fixautorestart && ( cp "${FILESDIR}/gnome-shell.sh" /usr/bin/ || die )
 
 	if ! has_version '>=media-libs/gst-plugins-good-0.10.23' || \
 	   ! has_version 'media-plugins/gst-plugins-vp8'; then
