@@ -1,3 +1,2 @@
 >=net-wireless/wpa_supplicant-0.7.3-r3
->net-wireless/bluez-4.90
->=gnome-base/gsettings-desktop-schemas-2.91.92
+>net-wireless/bluez-4.91

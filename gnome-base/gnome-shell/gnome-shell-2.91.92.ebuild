@@ -66,7 +66,7 @@ RDEPEND="${COMMON_DEPEND}
 	>=gnome-base/libgnomekbd-2.91.4[introspection]
 	sys-power/upower[introspection]
 
-	>=gnome-base/gnome-session-2.91.91
+	>=gnome-base/gnome-session-2.91.93
 
 	>=gnome-base/gnome-settings-daemon-2.91
 	>=gnome-base/gnome-control-center-2.91
@@ -85,7 +85,6 @@ G2CONF="--enable-compile-warnings=maximum
 
 src_prepare() {
 	epatch "${FILESDIR}/${PN}-fix-gnome-bluetooth.patch"
-	epatch "${FILESDIR}/${PN}-fix-logout.patch"
 
 	gnome2_src_prepare
 }

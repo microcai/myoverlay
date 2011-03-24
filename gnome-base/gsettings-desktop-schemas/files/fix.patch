@@ -1,0 +1,31 @@
+From 012b8bada4bea13d71107e5e207ad92d3feaa99d Mon Sep 17 00:00:00 2001
+From: microcai <microcai@fedoraproject.org>
+Date: Thu, 24 Mar 2011 19:15:28 +0800
+Subject: [PATCH] b
+
+---
+ .../org.gnome.desktop.background.gschema.xml.in.in |    8 ++++++++
+ 1 files changed, 8 insertions(+), 0 deletions(-)
+
+diff --git a/schemas/org.gnome.desktop.background.gschema.xml.in.in b/schemas/org.gnome.desktop.background.gschema.xml.in.in
+index ce8a6b8..16f416d 100644
+--- a/schemas/org.gnome.desktop.background.gschema.xml.in.in
++++ b/schemas/org.gnome.desktop.background.gschema.xml.in.in
+@@ -14,6 +14,14 @@
+         "stretched", "zoom", "spanned".
+       </_description>
+     </key>
++    <key name="picture-filename" type="s">
++      <default>'file://@datadir@/themes/Adwaita/backgrounds/stripes.jpg'</default>
++      <_summary>Picture URI</_summary>
++      <_description>
++        URI to use for the background image. Not that the backend only supports
++        local (file://) URIs.
++      </_description>
++    </key>
+     <key name="picture-uri" type="s">
+       <default>'file://@datadir@/themes/Adwaita/backgrounds/stripes.jpg'</default>
+       <_summary>Picture URI</_summary>
+-- 
+1.7.4.1
+

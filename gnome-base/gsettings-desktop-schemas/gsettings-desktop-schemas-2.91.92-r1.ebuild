@@ -26,3 +26,9 @@ DEPEND="${RDEPEND}
 	>=dev-util/intltool-0.40"
 
 DOCS="AUTHORS HACKING NEWS README"
+
+src_prepare()
+{
+	epatch "${FILESDIR}/fix.patch"
+	gnome2_src_prepare
+}
