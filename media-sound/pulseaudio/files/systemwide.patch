@@ -1,0 +1,25 @@
+diff -ru a/pulseaudio-2.1/src/daemon/main.c b/pulseaudio-2.1/src/daemon/main.c
+--- a/pulseaudio-2.1/src/daemon/main.c	2012-07-19 19:29:38.000000000 +0800
++++ b/pulseaudio-2.1/src/daemon/main.c	2012-08-13 07:49:32.107198376 +0800
+@@ -714,15 +714,17 @@
+         pa_xfree(configured_address);
+     }
+ 
+-    if (conf->system_instance && !conf->disallow_exit)
+-        pa_log_warn(_("Running in system mode, but --disallow-exit not set!"));
++    if (conf->system_instance && !conf->disallow_exit){
++	pa_log_warn(_("Running in system mode, but --disallow-exit not set!"));
++	conf->disallow_exit = TRUE;
++    }
+ 
+     if (conf->system_instance && !conf->disallow_module_loading)
+         pa_log_warn(_("Running in system mode, but --disallow-module-loading not set!"));
+ 
+     if (conf->system_instance && !conf->disable_shm) {
+-        pa_log_notice(_("Running in system mode, forcibly disabling SHM mode!"));
+-        conf->disable_shm = TRUE;
++        pa_log_notice(_("Running in system mode, but enable SHM mode!"));
++	//conf->disable_shm = TRUE;
+     }
+ 
+     if (conf->system_instance && conf->exit_idle_time >= 0) {

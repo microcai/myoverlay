@@ -1,0 +1,11 @@
+
+
+[Path]
+
+DirectoryNotEmpty=/var/spool/mqueue
+
+Unit=sendmail-mta.service
+
+[Install]
+WantedBy=default.target
+
