@@ -8,7 +8,7 @@ inherit gnome2-utils pax-utils
 
 DESCRIPTION="Dropbox daemon (pretends to be GUI-less)"
 HOMEPAGE="http://dropbox.com/"
-SRC_URI=" amd64? ( http://dl-web.dropbox.com/u/17/dropbox-lnx.x86_64-${PV}.tar.gz )"
+SRC_URI=" amd64? ( https://dl-web.dropbox.com/u/17/dropbox-lnx.x86_64-${PV}.tar.gz )"
 
 LICENSE="CCPL-Attribution-NoDerivs-3.0 FTL MIT LGPL-2 openssl dropbox"
 SLOT="0"
