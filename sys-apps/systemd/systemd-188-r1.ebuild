@@ -106,7 +106,10 @@ src_install() {
 		bashcompletiondir=/tmp
 
 	# compat for init= use
+	dosym ../usr/lib/systemd/systemd /bin/systemd
 	dosym ../lib/systemd/systemd /usr/bin/systemd
+	# rsyslog.service depends on it...
+	dosym ../usr/bin/systemctl /bin/systemctl
 
 	# move files as necessary
 	newbashcomp "${D}"/tmp/systemd-bash-completion.sh ${PN}
@@ -120,6 +123,10 @@ src_install() {
 	# Create /run/lock as required by new baselay/OpenRC compat.
 	insinto /usr/lib/tmpfiles.d
 	doins "${FILESDIR}"/gentoo-run.conf
+
+	# Check whether we won't break user's system.
+	[[ -x "${D}"/bin/systemd ]] || die '/bin/systemd symlink broken, aborting.'
+	[[ -x "${D}"/usr/bin/systemd ]] || die '/usr/bin/systemd symlink broken, aborting.'
 }
 
 pkg_preinst() {
