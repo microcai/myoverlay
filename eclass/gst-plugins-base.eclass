@@ -74,8 +74,7 @@ gst-plugins-base_src_configure() {
 
 	cd "${S}"
 
-	sed -e 's/@GST_MAJORMINOR@\.la/@GST_MAJORMINOR@\.so/g' -i Makefile.in
-	sed -e 's/$(GST_MAJORMINOR)\.la/$(GST_MAJORMINOR)\.so/g' -i Makefile.in
+	find . -name Makefile.in -print0 | xargs -0 sed -e 's/@GST_MAJORMINOR@\.la/@GST_MAJORMINOR@\.so/g' -e 's/$(GST_MAJORMINOR)\.la/$(GST_MAJORMINOR)\.so/g' -i
 
 	econf ${@} --with-package-name="Gentoo GStreamer Ebuild" --with-package-origin="http://www.gentoo.org" ${gst_conf}
 
