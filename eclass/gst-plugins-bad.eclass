@@ -1,6 +1,6 @@
-# Copyright 1999-2009 Gentoo Foundation
+# Copyright 1999-2012 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/eclass/gst-plugins-bad.eclass,v 1.37 2011/04/13 08:50:24 leio Exp $
+# $Header: /var/cvsroot/gentoo-x86/eclass/gst-plugins-bad.eclass,v 1.44 2012/06/20 08:49:27 scarabeus Exp $
 
 #
 # Original Author: Saleem Abdulrasool <compnerd@gentoo.org>
@@ -9,23 +9,51 @@
 # plugin rather than in a single package.
 #
 
-inherit eutils versionator gst-plugins10
+inherit eutils multilib versionator gst-plugins10
+
+GSTBAD_EXPF="src_unpack src_compile src_install"
+case "${EAPI:-0}" in
+	2|3|4) GSTBAD_EXPF+=" src_prepare src_configure" ;;
+	0|1) ;;
+	*) die "EAPI=\"${EAPI}\" is not supported yet" ;;
+esac
+
+
+EXPORT_FUNCTIONS ${GSTBAD_EXPF}
 
 # This list is current for gst-plugins-bad-0.10.21.
 my_gst_plugins_bad="directsound directdraw osx_video quicktime vcd
 assrender amrwb apexsink bz2 cdaudio celt cog dc1394 directfb dirac dts divx
 faac faad fbdev flite gsm jp2k kate ladspa lv2 libmms
 modplug mimic mpeg2enc mplex musepack musicbrainz mythtv nas neon ofa rsvg
-timidity wildmidi sdl sdltest sndfile soundtouch spc gme swfdec theoradec xvid
-dvb wininet acm vdpau schro zbar"
+timidity wildmidi sdl sdltest sndfile soundtouch spc gme swfdec xvid
+dvb wininet acm vdpau schro zbar resindvd vp8"
 
 # When adding conditionals like below, be careful about having leading spaces
 
+# Changes in 0.10.22:
+# New curlsink element in a new curl plugin
+# New Blackmagic Decklink source and sink
+# New Linear Systems SDI plugin
+if version_is_at_least "0.10.22"; then
+	my_gst_plugins_bad+=" curl decklink linsys"
+fi
+
+# Unused ancient theora decoder, better one in -base long ago
+if ! version_is_at_least "0.10.22"; then
+	my_gst_plugins_bad+=" theoradec"
+fi
+
 # Changes in 0.10.21:
 # New opencv and apple_media plugins
-# exif for a specific jifmux tests purpose only
 if version_is_at_least "0.10.21"; then
-	my_gst_plugins_bad+=" opencv apple_media exif"
+	my_gst_plugins_bad+=" opencv apple_media"
+fi
+
+# exif for a specific jifmux tests purpose only.
+# Made automagic in 0.10.22, which is fine as a non-installed test
+if [ ${PV} == "0.10.21" ]; then
+	my_gst_plugins_bad+=" exif"
 fi
 
 # jack moved to -good, metadata removed (functionality in base classes)
@@ -40,32 +68,10 @@ if version_is_at_least "0.10.20"; then
 	my_gst_plugins_bad+=" rtmp gsettings shm"
 fi
 
-# Changes in 0.10.19:
-# dvdnav configure option changed from --enable-dvdnav to --enable-resindvd
-# New vp8 plugin
-if version_is_at_least "0.10.19"; then
-	my_gst_plugins_bad+=" resindvd vp8"
-fi
-
-# dvdnav configure option changed from --enable-dvdnav to --enable-resindvd
-# oss4 moved to -good
-if ! version_is_at_least "0.10.19"; then
-	my_gst_plugins_bad+=" dvdnav oss4"
-fi
-
-# Changes in 0.10.18:
-# ivorbis gone (moved to -base-0.10.27 as part of vorbis plugin)
-if ! version_is_at_least "0.10.18"; then
-	my_gst_plugins_bad+=" ivorbis"
-fi
-
 MY_PN="gst-plugins-bad"
 MY_P=${MY_PN}-${PV}
 
 SRC_URI="http://gstreamer.freedesktop.org/src/gst-plugins-bad/${MY_P}.tar.bz2"
-if [ ${PV} == "0.10.14" ]; then
-	SRC_URI="${SRC_URI} http://dev.gentoo.org/~leio/distfiles/gst-plugins-bad-0.10.14-kate-configure-fix.patch.bz2"
-fi
 
 # added to remove circular deps
 # 6/2/2006 - zaheerm
@@ -75,7 +81,7 @@ RDEPEND="=media-libs/gstreamer-0.10*
 		>=dev-libs/glib-2.6"
 DEPEND="${RDEPEND}
 		sys-apps/sed
-		dev-util/pkgconfig
+		virtual/pkgconfig
 		sys-devel/gettext"
 
 # -bad-0.10.20 uses orc optionally instead of liboil unconditionally.
@@ -94,7 +100,10 @@ gst-plugins-bad_src_unpack() {
 #	local makefiles
 
 	unpack ${A}
+	has src_prepare ${GSTBAD_EXPF} || gst-plugins-bad_src_prepare
+}
 
+gst-plugins-bad_src_prepare() {
 	# Link with the syswide installed gst-libs if needed
 	gst-plugins10_find_plugin_dir
 	sed -e "s:\$(top_builddir)/gst-libs/gst/interfaces/libgstphotography:${ROOT}/usr/$(get_libdir)/libgstphotography:" \
@@ -102,15 +111,9 @@ gst-plugins-bad_src_unpack() {
 		-e "s:\$(top_builddir)/gst-libs/gst/video/libgstbasevideo:${ROOT}/usr/$(get_libdir)/libgstbasevideo:" \
 		-e "s:\$(top_builddir)/gst-libs/gst/basecamerabinsrc/libgstbasecamerabinsrc:${ROOT}/usr/$(get_libdir)/libgstbasecamerabinsrc:" \
 		-i Makefile.in
-
+	
+	#link with .so not .la
 	sed -e 's/@GST_MAJORMINOR@\.la/@GST_MAJORMINOR@\.so/g' -i Makefile.in
-	# 0.10.14 configure errors when --disable-kate is passed:
-	# configure: error: conditional "USE_TIGER" was never defined.
-	# Fix it - this has to stay until any 0.10.14 split or main is in tree:
-	if [ ${PV} == "0.10.14" ]; then
-		cd ${S}
-		epatch "${WORKDIR}/gst-plugins-bad-0.10.14-kate-configure-fix.patch"
-	fi
 
 	# Remove generation of any other Makefiles except the plugin's Makefile
 #	if [[ -d "${S}/sys/${GST_PLUGINS_BUILD_DIR}" ]] ; then
@@ -121,7 +124,6 @@ gst-plugins-bad_src_unpack() {
 
 #	sed -e "s:ac_config_files=.*:ac_config_files='${makefiles}':" \
 #		-i ${S}/configure
-
 }
 
 gst-plugins-bad_src_configure() {
@@ -130,19 +132,19 @@ gst-plugins-bad_src_configure() {
 	einfo "Configuring to build ${GST_PLUGINS_BUILD} plugin(s) ..."
 
 	for plugin in ${my_gst_plugins_bad} ; do
-		gst_conf="${gst_conf} --disable-${plugin}"
+		gst_conf+=" --disable-${plugin}"
 	done
 
 	for plugin in ${GST_PLUGINS_BUILD} ; do
-		gst_conf="${gst_conf} --enable-${plugin}"
+		gst_conf+=" --enable-${plugin}"
 	done
 
 	cd ${S}
-	econf ${@} --with-package-name="Gentoo GStreamer Ebuild" --with-package-origin="http://www.gentoo.org" ${gst_conf} || die "configure failed"
+	econf ${@} --with-package-name="Gentoo GStreamer Ebuild" --with-package-origin="http://www.gentoo.org" ${gst_conf}
 }
 
 gst-plugins-bad_src_compile() {
-	gst-plugins-bad_src_configure ${@}
+	has src_configure ${GSTBAD_EXPF} || gst-plugins-bad_src_configure ${@}
 
 	gst-plugins10_find_plugin_dir
 	emake || die "compile failure"
@@ -154,5 +156,3 @@ gst-plugins-bad_src_install() {
 
 	[[ -e README ]] && dodoc README
 }
-
-EXPORT_FUNCTIONS src_unpack src_compile src_install

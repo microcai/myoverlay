@@ -1,6 +1,6 @@
-# Copyright 1999-2004 Gentoo Foundation
+# Copyright 1999-2012 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/eclass/gst-plugins-base.eclass,v 1.18 2010/08/12 10:53:57 pva Exp $
+# $Header: /var/cvsroot/gentoo-x86/eclass/gst-plugins-base.eclass,v 1.22 2012/06/02 19:02:42 zmedico Exp $
 
 # Author : foser <foser@gentoo.org>
 
@@ -14,14 +14,14 @@
 # Gentoo developers responsible for gstreamer <gnome@gentoo.org>, the application developer
 # or the gstreamer team.
 
-inherit eutils gst-plugins10
+inherit eutils gst-plugins10 multilib
 
 GST_EXPF="src_unpack src_compile src_install"
-case ${EAPI:-0} in                                                                  
-	2|3) GST_EXPF="${GST_EXPF} src_prepare src_configure" ;;                
-	1|0) ;;                                                                     
-	*) die "Unknown EAPI" ;;                                                   
-esac                                                                                
+case ${EAPI:-0} in
+	2|3) GST_EXPF="${GST_EXPF} src_prepare src_configure" ;;
+	1|0) ;;
+	*) die "Unknown EAPI" ;;
+esac
 EXPORT_FUNCTIONS ${GST_EXPF}
 
 ###
@@ -49,7 +49,7 @@ RDEPEND=">=media-libs/gst-plugins-base-${PV}"
 DEPEND="${RDEPEND}
 	~media-libs/gst-plugins-base-${PV}
 	>=sys-apps/sed-4
-	dev-util/pkgconfig"
+	virtual/pkgconfig"
 RESTRICT=test
 fi
 
@@ -73,6 +73,10 @@ gst-plugins-base_src_configure() {
 	done
 
 	cd "${S}"
+
+	sed -e 's/@GST_MAJORMINOR@\.la/@GST_MAJORMINOR@\.so/g' -i Makefile.in
+	sed -e 's/$(GST_MAJORMINOR)\.la/$(GST_MAJORMINOR)\.so/g' -i Makefile.in
+
 	econf ${@} --with-package-name="Gentoo GStreamer Ebuild" --with-package-origin="http://www.gentoo.org" ${gst_conf}
 
 }
@@ -112,9 +116,6 @@ gst-plugins-base_src_prepare() {
 		-e "s:\${top_builddir}/gst-libs/gst/rtp/libgstrtp:${ROOT}/usr/$(get_libdir)/libgstrtp:" \
 		-i Makefile.in
 #	cd ${S}
-	sed -e 's/@GST_MAJORMINOR@\.la/@GST_MAJORMINOR@\.so/g' -i Makefile.in
-	sed -e 's/$(GST_MAJORMINOR)\.la/$(GST_MAJORMINOR)\.so/g' -i Makefile.in
-
 
 	# Remove generation of any other Makefiles except the plugin's Makefile
 #	if [ -d "${S}/sys/${GST_PLUGINS_BUILD_DIR}" ]; then

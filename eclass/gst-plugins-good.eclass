@@ -1,6 +1,6 @@
-# Copyright 1999-2004 Gentoo Foundation
+# Copyright 1999-2012 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-# $Header: /var/cvsroot/gentoo-x86/eclass/gst-plugins-good.eclass,v 1.24 2011/05/04 03:19:27 leio Exp $
+# $Header: /var/cvsroot/gentoo-x86/eclass/gst-plugins-good.eclass,v 1.27 2012/05/02 18:31:42 jdhore Exp $
 
 # Author : foser <foser@gentoo.org>, zaheerm <zaheerm@gentoo.org>
 
@@ -38,6 +38,11 @@ libcaca libdv libpng pulse dv1394 shout2 shout2test soup speex taglib wavpack"
 
 # When adding conditionals like below, be careful about having leading spaces in concat
 
+# cairooverlay added to the cairo plugin under cairo_gobject
+if version_is_at_least "0.10.29"; then
+	my_gst_plugins_good+=" cairo_gobject"
+fi
+
 # ext/jack moved here since 0.10.27
 if version_is_at_least "0.10.27"; then
 	my_gst_plugins_good+=" jack"
@@ -53,7 +58,7 @@ if [ "${PN}" != "${MY_PN}" ]; then
 RDEPEND="=media-libs/gst-plugins-base-0.10*"
 DEPEND="${RDEPEND}
 	>=sys-apps/sed-4
-	dev-util/pkgconfig"
+	virtual/pkgconfig"
 
 # -good-0.10.24 uses orc optionally instead of liboil unconditionally.
 # While <0.10.24 configure always checks for liboil, it is linked to only by non-split
@@ -101,13 +106,10 @@ gst-plugins-good_src_unpack() {
 	unpack ${A}
 
 	# Link with the syswide installed gst-libs if needed
-(	gst-plugins10_find_plugin_dir
-	cd ${S}
+#	gst-plugins10_find_plugin_dir
+#	cd ${S}
 
-	sed -e 's/@GST_MAJORMINOR@\.la/@GST_MAJORMINOR@\.so/g' -i Makefile.in
-)
-
-# Remove generation of any other Makefiles except the plugin's Makefile
+	# Remove generation of any other Makefiles except the plugin's Makefile
 #	if [ -d "${S}/sys/${GST_PLUGINS_BUILD_DIR}" ]; then
 #		makefiles="Makefile sys/Makefile sys/${GST_PLUGINS_BUILD_DIR}/Makefile"
 #	elif [ -d "${S}/ext/${GST_PLUGINS_BUILD_DIR}" ]; then
@@ -115,6 +117,8 @@ gst-plugins-good_src_unpack() {
 #	fi
 #	sed -e "s:ac_config_files=.*:ac_config_files='${makefiles}':" \
 #		-i ${S}/configure
+	# link with .so not .a
+	sed -e 's/@GST_MAJORMINOR@\.la/@GST_MAJORMINOR@\.so/g' -i Makefile.in
 
 }
 
