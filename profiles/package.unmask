@@ -2,3 +2,5 @@
 
 =app-i18n/ibus-1.3.99.20110408
 =app-i18n/ibus-pinyin-1.3.99.20110217
+
+=dev-libs/boost-1.51.0
