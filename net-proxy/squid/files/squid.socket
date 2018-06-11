@@ -1,9 +1,0 @@
-[Unit]
-Description=squid socket 
-
-[Socket]
-Transparent=true
-ListenStream=0.0.0.0:3128
-
-[Install]
-WantedBy=sockets.target
