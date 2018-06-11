@@ -14,10 +14,10 @@ inherit kde4-base
 
 DESCRIPTION="KDE development support libraries and apps"
 LICENSE="GPL-2 LGPL-2"
-IUSE="+classbrowser cvs debug +konsole reviewboard subversion"
+IUSE="+classbrowser cvs debug -konsole reviewboard subversion"
 
 if [[ ${KDE_BUILD_TYPE} = release ]]; then
-	KEYWORDS="~amd64 ~x86"
+	KEYWORDS="amd64 x86"
 fi
 
 RESTRICT="test"
@@ -36,7 +36,6 @@ DEPEND="${COMMON_DEPEND}
 "
 RDEPEND="${COMMON_DEPEND}
 	cvs? ( dev-vcs/cvs )
-	konsole? ( $(add_kdeapps_dep konsolepart) )
 	!<dev-util/kdevelop-${KDEVELOP_VERSION}:4
 "
 
