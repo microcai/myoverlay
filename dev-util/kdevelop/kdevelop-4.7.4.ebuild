@@ -18,6 +18,7 @@ if [[ ${KDE_BUILD_TYPE} = release ]]; then
 fi
 
 DEPEND="
+	kde-apps/katepart:4
 	dev-libs/qjson
 	dev-qt/qtdeclarative:4
 	okteta? ( $(add_kdeapps_dep okteta) )
