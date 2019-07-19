@@ -1,0 +1,965 @@
+From a5ae05ba9aa0f611688c0dd73832d27f73b59ade Mon Sep 17 00:00:00 2001
+From: Your Name <you@example.com>
+Date: Fri, 19 Jul 2019 15:45:38 +0800
+Subject: [PATCH] b
+
+---
+ CMakeLists.txt                                |   2 +-
+ cmake/modules/FindKDE4Internal.cmake          |  11 +-
+ interfaces/kmediaplayer/CMakeLists.txt        |   2 -
+ kdeui/CMakeLists.txt                          |   3 +-
+ kdeui/notifications/kstatusnotifieritem.cpp   |  54 -----
+ kdewidgets/kde.widgets                        |   9 +-
+ kdewidgets/makekdewidgets.cpp                 |   2 +
+ khtml/CMakeLists.txt                          |   1 -
+ khtml/html/HTMLMediaElement.cpp               | 190 +-----------------
+ khtml/html/HTMLMediaElement.h                 |   4 -
+ khtml/html/HTMLVideoElement.cpp               |  20 +-
+ khtml/html/HTMLVideoElement.h                 |   2 -
+ khtml/rendering/media_controls.cpp            |  45 +----
+ khtml/rendering/media_controls.h              |   4 +-
+ khtml/rendering/render_media.cpp              | 117 -----------
+ khtml/rendering/render_media.h                |  73 -------
+ knotify/config/knotifyconfigactionswidget.cpp |  15 --
+ 17 files changed, 18 insertions(+), 536 deletions(-)
+ delete mode 100644 khtml/rendering/render_media.cpp
+ delete mode 100644 khtml/rendering/render_media.h
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index da28794..9e07da7 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -152,7 +152,7 @@ set_package_properties(QCA2 PROPERTIES DESCRIPTION "Support for remote plasma wi
+ find_package(DBusMenuQt)
+ set_package_properties(DBusMenuQt PROPERTIES DESCRIPTION "Support for notification area menus via the DBusMenu protocol"
+                        URL "https://launchpad.net/libdbusmenu-qt"
+-                       TYPE REQUIRED
++		       TYPE OPTIONAL
+                       )
+ 
+ ################# Disallow in-source build #################
+diff --git a/cmake/modules/FindKDE4Internal.cmake b/cmake/modules/FindKDE4Internal.cmake
+index 2adfede..74ecfe1 100644
+--- a/cmake/modules/FindKDE4Internal.cmake
++++ b/cmake/modules/FindKDE4Internal.cmake
+@@ -674,16 +674,7 @@ endif(_kdeBootStrapping  OR  TARGET ${KDE4_TARGET_PREFIX}nepomuk)
+ # which helps with finding the phonon installed as part of kdesupport:
+ 
+ # only make Phonon REQUIRED if KDE4 itself is REQUIRED
+-find_package(Phonon 4.3.80 ${_REQ_STRING_KDE4})
+-set(KDE4_PHONON_LIBRARY ${PHONON_LIBRARY})
+-set(KDE4_PHONON_LIBS ${PHONON_LIBS})
+-set(KDE4_PHONON_INCLUDES ${PHONON_INCLUDES})
+-
+-if(NOT PHONON_FOUND)
+-   message(STATUS "KDE4 not found, because Phonon was not found")
+-   return()
+-endif(NOT PHONON_FOUND)
+-
++find_package(Phonon 4.3.80)
+ 
+ #####################  provide some options   ##########################################
+ 
+diff --git a/interfaces/kmediaplayer/CMakeLists.txt b/interfaces/kmediaplayer/CMakeLists.txt
+index a98389f..b96db01 100644
+--- a/interfaces/kmediaplayer/CMakeLists.txt
++++ b/interfaces/kmediaplayer/CMakeLists.txt
+@@ -1,5 +1,3 @@
+-add_subdirectory( kfileaudiopreview )
+-
+ 
+ include_directories( ${KDE4_KPARTS_INCLUDES} )
+ 
+diff --git a/kdeui/CMakeLists.txt b/kdeui/CMakeLists.txt
+index cadb52e..d9bbb29 100644
+--- a/kdeui/CMakeLists.txt
++++ b/kdeui/CMakeLists.txt
+@@ -31,7 +31,6 @@ include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}/windowmanagement
+  ${CMAKE_CURRENT_SOURCE_DIR}/xmlgui
+  ${CMAKE_CURRENT_BINARY_DIR}/util
+- ${DBUSMENUQT_INCLUDE_DIR}
+ )
+ if(QCA2_FOUND)
+   include_directories(
+@@ -427,7 +426,7 @@ target_link_libraries(kdeui LINK_PRIVATE ${KDE4_KDECORE_LIBS} ${X11_LIBRARIES} $
+                             ${QT_QTXML_LIBRARY} ${KDEUI_EXTRA_LIBS} ${QT_QTNETWORK_LIBRARY})
+ 
+ if(NOT WINCE)
+-target_link_libraries(kdeui  LINK_PRIVATE ${QT_QTSVG_LIBRARY} ${DBUSMENUQT_LIBRARIES})
++target_link_libraries(kdeui  LINK_PRIVATE ${QT_QTSVG_LIBRARY})
+ endif(NOT WINCE)
+ 
+ if(MINGW)
+diff --git a/kdeui/notifications/kstatusnotifieritem.cpp b/kdeui/notifications/kstatusnotifieritem.cpp
+index 1b15d40..369a633 100644
+--- a/kdeui/notifications/kstatusnotifieritem.cpp
++++ b/kdeui/notifications/kstatusnotifieritem.cpp
+@@ -45,59 +45,10 @@
+ 
+ #include <netinet/in.h>
+ 
+-#include <dbusmenuexporter.h>
+-
+ #include "statusnotifieritemadaptor.h"
+ 
+ static const QString s_statusNotifierWatcherServiceName("org.kde.StatusNotifierWatcher");
+ 
+-/**
+- * Specialization to provide access to KDE icon names
+- */
+-class KDBusMenuExporter : public DBusMenuExporter
+-{
+-public:
+-    KDBusMenuExporter(const QString &dbusObjectPath, QMenu *menu, const QDBusConnection &dbusConnection)
+-    : DBusMenuExporter(dbusObjectPath, menu, dbusConnection)
+-    {}
+-
+-protected:
+-    virtual QString iconNameForAction(QAction *action)
+-    {
+-        KIcon icon(action->icon());
+-#if QT_VERSION >= 0x040701
+-        // QIcon::name() is in the 4.7 git branch, but it is not in 4.7 TP.
+-        // If you get a build error here, you need to update your pre-release
+-        // of Qt 4.7.
+-        return icon.isNull() ? QString() : icon.name();
+-#else
+-        // Qt 4.6: If the icon was created by us, via our engine, serializing it
+-        // will let us get to the name.
+-        if (!icon.isNull()) {
+-            QBuffer encBuf;
+-            encBuf.open(QIODevice::WriteOnly);
+-            QDataStream encode(&encBuf);
+-            encode.setVersion(QDataStream::Qt_4_6);
+-            encode << icon;
+-            encBuf.close();
+-
+-            if (!encBuf.data().isEmpty()) {
+-                QDataStream decode(encBuf.data());
+-                QString key;
+-                decode >> key;
+-                if (key == QLatin1String("KIconEngine")) {
+-                    QString name;
+-                    decode >> name;
+-                    return name;
+-                }
+-            }
+-        }
+-        
+-        return QString();
+-#endif
+-    }
+-};
+-
+ KStatusNotifierItem::KStatusNotifierItem(QObject *parent)
+       : QObject(parent),
+         d(new KStatusNotifierItemPrivate(this))
+@@ -444,17 +395,12 @@ void KStatusNotifierItem::setContextMenu(KMenu *menu)
+     if (d->systemTrayIcon) {
+         d->systemTrayIcon->setContextMenu(menu);
+     } else if (d->menu != menu) {
+-        if (getenv("KSNI_NO_DBUSMENU")) {
+             // This is a hack to make it possible to disable DBusMenu in an
+             // application. The string "/NO_DBUSMENU" must be the same as in
+             // DBusSystemTrayWidget::findDBusMenuInterface() in the Plasma
+             // systemtray applet.
+             d->menuObjectPath = "/NO_DBUSMENU";
+             menu->installEventFilter(this);
+-        } else {
+-            d->menuObjectPath = "/MenuBar";
+-            new KDBusMenuExporter(d->menuObjectPath, menu, d->statusNotifierItemDBus->dbusConnection());
+-        }
+ 
+         connect(menu, SIGNAL(aboutToShow()), this, SLOT(contextMenuAboutToShow()));
+     }
+diff --git a/kdewidgets/kde.widgets b/kdewidgets/kde.widgets
+index 85d9a33..e0140bd 100644
+--- a/kdewidgets/kde.widgets
++++ b/kdewidgets/kde.widgets
+@@ -1,21 +1,21 @@
+ [Global]
+ PluginName=KDEWidgets
+-Includes=kcomponentdata.h,classpreviews.h,ktimezone.h
++Includes=kcomponentdata.h,classpreviews.h,ktimezone.h,classpreviews.h
+ Init=new KComponentData("kdewidgets");
+ 
+ [KActionSelector]
+-IncludeFile=kactionselector.h
++IncludeFile=kactionselector.h,classpreviews.h
+ ToolTip=A widget for selecting and arranging actions/objects
+ Group=Views (KDE)
+ 
+ [KAnimatedButton]
+-IncludeFile=kanimatedbutton.h
++IncludeFile=kanimatedbutton.h,classpreviews.h
+ ToolTip=An extended version of QToolButton which can display an animated icon.
+ Group=Display (KDE)
+ ConstructorArgs=(parent)
+ 
+ [KButtonGroup]
+-IncludeFile=kbuttongroup.h
++IncludeFile=kbuttongroup.h,classpreviews.h
+ ToolTip=Group of radio buttons with index selection.
+ IsContainer=true
+ Group=Container (KDE)
+@@ -102,6 +102,7 @@ Group=Date/Time (KDE)
+ 
+ [KDialog]
+ IsContainer=true
++IncludeFile=classpreviews.h
+ ImplClass=KDialogPreview
+ ToolTip=Class for simple Dialogs (KDE)
+ Group=Container (KDE)
+diff --git a/kdewidgets/makekdewidgets.cpp b/kdewidgets/makekdewidgets.cpp
+index 3556572..3bb3a94 100644
+--- a/kdewidgets/makekdewidgets.cpp
++++ b/kdewidgets/makekdewidgets.cpp
+@@ -23,6 +23,8 @@ static const char classHeader[] = 	"/**\n"
+ 					"#include <QtDesigner/QDesignerContainerExtension>\n"
+ 					"#include <QDesignerCustomWidgetInterface>\n"
+ 					"#include <qplugin.h>\n"
++					"#include \"classpreviews.h\"\n"
++					"#include \"keditlistbox.h\"\n"
+ 					"#include <qdebug.h>\n";
+ 
+ static const char collClassDef[] = "class %CollName : public QObject, public QDesignerCustomWidgetCollectionInterface\n"
+diff --git a/khtml/CMakeLists.txt b/khtml/CMakeLists.txt
+index e02e285..367867e 100644
+--- a/khtml/CMakeLists.txt
++++ b/khtml/CMakeLists.txt
+@@ -362,7 +362,6 @@ set(khtmlrender_STAT_SRCS
+   ${CMAKE_SOURCE_DIR}/khtml/rendering/counter_tree.cpp
+   ${CMAKE_SOURCE_DIR}/khtml/rendering/render_canvasimage.cpp
+   ${CMAKE_SOURCE_DIR}/khtml/rendering/render_position.cpp
+-  ${CMAKE_SOURCE_DIR}/khtml/rendering/render_media.cpp
+   ${CMAKE_SOURCE_DIR}/khtml/rendering/media_controls.cpp
+ )
+ 
+diff --git a/khtml/html/HTMLMediaElement.cpp b/khtml/html/HTMLMediaElement.cpp
+index d02a780..35529a6 100644
+--- a/khtml/html/HTMLMediaElement.cpp
++++ b/khtml/html/HTMLMediaElement.cpp
+@@ -37,9 +37,6 @@
+ #include "css/cssproperties.h"
+ #include "css/cssvalues.h"
+ #include "css/csshelper.h"
+-#include <phonon/mediaobject.h>
+-#include <phonon/backendcapabilities.h>
+-#include <rendering/render_media.h>
+ #include <rendering/render_style.h>
+ 
+ const double doubleMax = 999999999.8; // ### numeric_limits<double>::max()
+@@ -65,66 +62,23 @@ HTMLMediaElement::HTMLMediaElement(Document* doc)
+     , m_previousProgress(0)
+     , m_previousProgressTime(doubleMax)
+     , m_sentStalledEvent(false)
+-    , m_player(new MediaPlayer())
+ {
+ }
+ 
+ void HTMLMediaElement::attach()
+ {
+-    assert(!attached());
+-    assert(!m_render);
+-    assert(parentNode());
+-
+-    RenderStyle* _style = document()->styleSelector()->styleForElement(this);
+-    _style->ref();
+-    if (parentNode()->renderer() && parentNode()->renderer()->childAllowed() &&
+-        _style->display() != NONE)
+-    {
+-        m_render = new (document()->renderArena()) RenderMedia(this);
+-        static_cast<RenderMedia*>(m_render)->setPlayer(m_player.data());
+-        m_render->setStyle(_style);
+-        parentNode()->renderer()->addChild(m_render, nextRenderer());
+-    }
+-    _style->deref();
+-
+-    NodeBaseImpl::attach();
+-    if (m_render)
+-	m_render->updateFromElement();
+-    setRenderer(m_render);
+-    updateLoadState();
+ }
+ 
+ void HTMLMediaElement::close()
+ {
+-    HTMLElement::close();
+-    updateLoadState();
+-    if (renderer())
+-        renderer()->updateFromElement();
+ }
+ 
+ HTMLMediaElement::~HTMLMediaElement()
+ {
+-    if (m_player) m_player->deleteLater();
+ }
+ 
+ void HTMLMediaElement::attributeChanged(NodeImpl::Id attrId)
+ {
+-    HTMLElement::attributeChanged(attrId);
+-
+-    if (attrId == ATTR_SRC) {
+-        // 3.14.9.2.
+-        // change to src attribute triggers load()
+-        if (inDocument() && m_networkState == NETWORK_EMPTY)
+-            scheduleLoad();
+-	updateLoadState();
+-    } if (attrId == ATTR_CONTROLS) {
+-        /*if (!isVideo() && attached() && (controls() != (renderer() != 0))) {
+-            detach();
+-            attach();
+-        }*/
+-        if (renderer())
+-            renderer()->updateFromElement();
+-    }
+ }
+ 
+ void HTMLMediaElement::scheduleLoad()
+@@ -182,13 +136,6 @@ void HTMLMediaElement::load(ExceptionCode&)
+ 
+ void HTMLMediaElement::loadResource(String &url)
+ {
+-    KUrl kurl(url.string());
+-    if (!m_player)
+-        return;
+-    if (autoplay())
+-        m_player->play(kurl);
+-    else
+-        m_player->load(kurl);
+ }
+ 
+ void HTMLMediaElement::updateLoadState()
+@@ -204,19 +151,7 @@ void HTMLMediaElement::updateLoadState()
+ 
+ String HTMLMediaElement::canPlayType(String type)
+ {
+-    QString theType = type.string().simplified();
+-    int paramsIdx = theType.indexOf(';');
+-    bool hasParams = (paramsIdx > 0 );
+-    // FIXME: Phonon doesn't provide the API to handle codec parameters yet
+-    if (hasParams)
+-        theType.truncate(paramsIdx);
+-    if (theType == QLatin1String("audio/ogg") || theType == QLatin1String("video/ogg"))
+-        theType = QLatin1String("application/ogg");
+-    if (Phonon::BackendCapabilities::isMimeTypeAvailable(theType))
+-        return "probably";
+-    if (theType == QLatin1String("application/octet-stream") && hasParams)
+-        return "";
+-    return "maybe";
++	return "";
+ }
+ 
+ void HTMLMediaElement::setReadyState(ReadyState state)
+@@ -243,11 +178,7 @@ bool HTMLMediaElement::seeking() const
+ // playback state
+ float HTMLMediaElement::currentTime() const
+ {
+-    if (!m_player)
+-        return 0;
+-    if (m_seeking)
+-        return m_currentTimeDuringSeek;
+-    return m_player->currentTime();
++	return 0.0f;
+ }
+ 
+ void HTMLMediaElement::setCurrentTime(float time, ExceptionCode& ec)
+@@ -264,7 +195,7 @@ float HTMLMediaElement::startTime() const
+ 
+ float HTMLMediaElement::duration() const
+ {
+-    return m_player ? m_player->totalTime() : 0;
++    return 0;
+ }
+ 
+ bool HTMLMediaElement::paused() const
+@@ -298,17 +229,6 @@ void HTMLMediaElement::setPlaybackRate(float rate, ExceptionCode& ec)
+ {
+     Q_UNUSED(rate);
+     Q_UNUSED(ec);
+-    // stub
+-    #if 0
+-    if (rate == 0.0f) {
+-        ec = DOMException::NOT_SUPPORTED_ERR;
+-        return;
+-    }
+-    if (m_player && m_player->rate() != rate) {
+-        m_player->setRate(rate);
+-        // ### dispatchEventAsync(ratechangeEvent);
+-    }
+-    #endif
+ }
+ 
+ bool HTMLMediaElement::ended() const
+@@ -338,48 +258,10 @@ void HTMLMediaElement::setLoop(bool b)
+ 
+ void HTMLMediaElement::play(ExceptionCode& ec)
+ {
+-    // 3.14.9.7. Playing the media resource
+-    if (!m_player || networkState() == NETWORK_EMPTY) {
+-        ec = 0;
+-        load(ec);
+-        if (ec)
+-            return;
+-    }
+-    ExceptionCode unused;
+-    if (endedPlayback()) {
+-        // ### seek(effectiveStart(), unused);
+-    }
+-    setPlaybackRate(defaultPlaybackRate(), unused);
+-    
+-    if (m_paused) {
+-        m_paused = false;
+-        // ### dispatchEventAsync(playEvent);
+-    }
+-
+-    m_autoplaying = false;
+-    
+-    updatePlayState();
+ }
+ 
+ void HTMLMediaElement::pause(ExceptionCode& ec)
+ {
+-    // 3.14.9.7. Playing the media resource
+-    if (!m_player || networkState() == NETWORK_EMPTY) {
+-        ec = 0;
+-        load(ec);
+-        if (ec)
+-            return;
+-    }
+-
+-    if (!m_paused) {
+-        m_paused = true;
+-        // ### dispatchEventAsync(timeupdateEvent);
+-        // ### dispatchEventAsync(pauseEvent);
+-    }
+-
+-    m_autoplaying = false;
+-    
+-    updatePlayState();
+ }
+ 
+ bool HTMLMediaElement::controls() const
+@@ -427,41 +309,7 @@ void HTMLMediaElement::setMuted(bool muted)
+ 
+ String HTMLMediaElement::pickMedia()
+ {
+-    if (!document())
+ 	return String();
+-    // 3.14.9.2. Location of the media resource
+-    String mediaSrc = getAttribute(ATTR_SRC);
+-    String maybeSrc;
+-    if (mediaSrc.isEmpty()) {
+-        for (NodeImpl* n = firstChild(); n; n = n->nextSibling()) {
+-            if (n->id() == ID_SOURCE) {
+-                String match = "maybe";
+-                HTMLSourceElement* source = static_cast<HTMLSourceElement*>(n);
+-                if (!source->hasAttribute(ATTR_SRC))
+-                    continue;
+-                if (source->hasAttribute(ATTR_TYPE)) {
+-                    String type = source->type();
+-                    match = canPlayType(type);
+-                }
+-                if (match == "maybe" && maybeSrc.isEmpty())
+-                    maybeSrc = source->src().string();
+-                else
+-                if (match == "probably") {
+-                    mediaSrc = source->src().string();
+-                    break;
+-                }
+-            }
+-        }
+-    }
+-    if (mediaSrc.isEmpty())
+-        mediaSrc = maybeSrc;
+-    if (mediaSrc.isEmpty())
+-	return mediaSrc;
+-    DocLoader* loader = document()->docLoader();
+-    if (!loader || !loader->willLoadMediaElement(mediaSrc))
+-	return String();
+-    mediaSrc = document()->completeURL(mediaSrc.string());
+-    return mediaSrc;
+ }
+ 
+ void HTMLMediaElement::checkIfSeekNeeded()
+@@ -471,12 +319,6 @@ void HTMLMediaElement::checkIfSeekNeeded()
+ 
+ PassRefPtr<TimeRanges> HTMLMediaElement::buffered() const
+ {
+-    // FIXME real ranges support
+-    #if 0
+-    if (!m_player || !m_player->maxTimeBuffered())
+-        return new TimeRanges;
+-    return new TimeRanges(0, m_player->maxTimeBuffered());
+-    #endif
+     return new TimeRanges(0, 0.0f); // stub
+ }
+ 
+@@ -488,44 +330,20 @@ PassRefPtr<TimeRanges> HTMLMediaElement::played() const
+ 
+ PassRefPtr<TimeRanges> HTMLMediaElement::seekable() const
+ {
+-    #if 0
+-    // FIXME real ranges support
+-    if (!m_player || !m_player->maxTimeSeekable())
+-        return new TimeRanges;
+-    return new TimeRanges(0, m_player->maxTimeSeekable());
+-    #endif
+     return new TimeRanges(0, 0.0f); // stub
+ }
+ 
+ bool HTMLMediaElement::endedPlayback() const
+ {
+-#if 0
+-    return networkState() >= LOADED_METADATA && currentTime() >= effectiveEnd() && currentLoop() == playCount() - 1;
+-#endif
+-    return m_player && m_player->mediaObject()->remainingTime() == 0;
++    return true;
+ }
+ 
+ void HTMLMediaElement::updateVolume()
+ {
+-    if (!m_player)
+-        return;
+-
+-    m_player->setVolume(m_muted ? 0 : m_volume);
+-    
+-    if (renderer())
+-        renderer()->updateFromElement();
+ }
+ 
+ void HTMLMediaElement::updatePlayState()
+ {
+-    if (!m_player)
+-        return;
+-    if (m_autoplaying)
+-        return;
+-    if (m_paused && !m_player->isPaused())
+-        m_player->pause();
+-    if (!m_paused && !m_player->isPlaying())
+-        m_player->play();
+ }
+ 
+ }
+diff --git a/khtml/html/HTMLMediaElement.h b/khtml/html/HTMLMediaElement.h
+index baba984..6961b3c 100644
+--- a/khtml/html/HTMLMediaElement.h
++++ b/khtml/html/HTMLMediaElement.h
+@@ -37,8 +37,6 @@ namespace khtml {
+ 
+ class MediaError;
+ class TimeRanges;
+-class RenderMedia;
+-class MediaPlayer;
+ 
+ class HTMLMediaElement : public HTMLElement {
+ public:
+@@ -146,8 +144,6 @@ protected:
+     unsigned m_previousProgress;
+     double m_previousProgressTime;
+     bool m_sentStalledEvent;
+-    
+-    QPointer<MediaPlayer> m_player;
+ };
+ 
+ } //namespace
+diff --git a/khtml/html/HTMLVideoElement.cpp b/khtml/html/HTMLVideoElement.cpp
+index 0d102f4..0225acf 100644
+--- a/khtml/html/HTMLVideoElement.cpp
++++ b/khtml/html/HTMLVideoElement.cpp
+@@ -26,7 +26,6 @@
+ #include "HTMLVideoElement.h"
+ 
+ #include "HTMLDocument.h"
+-#include <rendering/render_media.h>
+ 
+ namespace khtml {
+ 
+@@ -42,41 +41,26 @@ DOM::NodeImpl::Id HTMLVideoElement::id() const
+ 
+ int HTMLVideoElement::videoWidth() const
+ {
+-    if (!m_player)
+-        return 0;
+-    if (m_player->mediaObject()->hasVideo())
+-        return m_player->videoWidget()->sizeHint().width();
+-    else
+         return 0;
+ }
+ 
+ int HTMLVideoElement::videoHeight() const
+ {
+-    if (!m_player)
+-        return 0;
+-    if (m_player->mediaObject()->hasVideo())
+-        return m_player->videoWidget()->sizeHint().height();
+-    else
+         return 0;
+ }
+ 
+ int HTMLVideoElement::width() const
+ {
+-    bool ok;
+-    int w = getAttribute(ATTR_WIDTH).toInt(&ok);
+-    return ok ? w : 0;
++    return 0;
+ }
+ 
+ void HTMLVideoElement::setWidth(int value)
+ {
+-    setAttribute(ATTR_WIDTH, QString::number(value));
+ }
+     
+ int HTMLVideoElement::height() const
+ {
+-    bool ok;
+-    int h = getAttribute(ATTR_HEIGHT).toInt(&ok);
+-    return ok ? h : 0;
++    return 0;
+ }
+     
+ void HTMLVideoElement::setHeight(int value)
+diff --git a/khtml/html/HTMLVideoElement.h b/khtml/html/HTMLVideoElement.h
+index 603d13c..adf2adc 100644
+--- a/khtml/html/HTMLVideoElement.h
++++ b/khtml/html/HTMLVideoElement.h
+@@ -26,8 +26,6 @@
+ #ifndef HTMLVideoElement_h
+ #define HTMLVideoElement_h
+ 
+-#include <phonon/mediaobject.h>
+-#include <phonon/videowidget.h>
+ #include "HTMLMediaElement.h"
+ 
+ namespace khtml {
+diff --git a/khtml/rendering/media_controls.cpp b/khtml/rendering/media_controls.cpp
+index d68a018..0970269 100644
+--- a/khtml/rendering/media_controls.cpp
++++ b/khtml/rendering/media_controls.cpp
+@@ -27,10 +27,6 @@
+ 
+ #include "media_controls.h"
+ #include <QtGui/QHBoxLayout>
+-#include <phonon/seekslider.h>
+-#include <phonon/mediaobject.h>
+-#include <rendering/render_media.h>
+-#include <phonon/videowidget.h>
+ #include <kicon.h>
+ #include <ktogglefullscreenaction.h>
+ #include <kshortcut.h>
+@@ -39,51 +35,12 @@
+ 
+ namespace khtml {
+ 
+-MediaControls::MediaControls(MediaPlayer* mediaPlayer, QWidget* parent) : QWidget(parent)
++MediaControls::MediaControls(void* mediaPlayer, QWidget* parent) : QWidget(parent)
+ {
+-    m_mediaPlayer = mediaPlayer;
+-    Phonon::MediaObject* mediaObject = m_mediaPlayer->mediaObject();
+-    setLayout(new QHBoxLayout(this));
+-    m_play = new QPushButton(KIcon("media-playback-start"), i18n("Play"), this);
+-    connect(m_play, SIGNAL(clicked()), mediaObject, SLOT(play()));
+-    layout()->addWidget(m_play);
+-    m_pause = new QPushButton(KIcon("media-playback-pause"), i18n("Pause"), this);
+-    connect(m_pause, SIGNAL(clicked()), mediaObject, SLOT(pause()));
+-    layout()->addWidget(m_pause);
+-    layout()->addWidget(new Phonon::SeekSlider(mediaObject, this));
+-    KAction* fsac = new KToggleFullScreenAction(this);
+-    fsac->setObjectName("KHTMLMediaPlayerFullScreenAction"); // needed for global shortcut activation.
+-    m_fullscreen = new QToolButton(this);
+-    m_fullscreen->setDefaultAction(fsac);
+-    m_fullscreen->setCheckable(true);
+-    connect(fsac, SIGNAL(toggled(bool)), this, SLOT(slotToggled(bool)));
+-    layout()->addWidget(m_fullscreen); 
+-
+-    slotStateChanged(mediaObject->state());
+-    connect(mediaObject, SIGNAL(stateChanged(Phonon::State,Phonon::State)), SLOT(slotStateChanged(Phonon::State)));
+ }
+ 
+ void MediaControls::slotToggled(bool t)
+ {
+-    if (t) {
+-        m_mediaPlayer->videoWidget()->enterFullScreen();
+-        static_cast<KAction*>(m_fullscreen->defaultAction())->setGlobalShortcut(KShortcut(Qt::Key_Escape));
+-    } else {
+-        m_mediaPlayer->videoWidget()->exitFullScreen();
+-        static_cast<KAction*>(m_fullscreen->defaultAction())->forgetGlobalShortcut();
+-    }
+ }
+-
+-void MediaControls::slotStateChanged(Phonon::State state)
+-{
+-    if (state == Phonon::PlayingState) {
+-        m_play->hide();
+-	m_pause->show();
+-    } else {
+-        m_pause->hide();
+-	m_play->show();
+-    }
+-}
+-
+ }
+ 
+diff --git a/khtml/rendering/media_controls.h b/khtml/rendering/media_controls.h
+index cf2d441..8d58348 100644
+--- a/khtml/rendering/media_controls.h
++++ b/khtml/rendering/media_controls.h
+@@ -27,7 +27,6 @@
+ #ifndef media_controls_h
+ #define media_controls_h
+ 
+-#include <phonon/mediaobject.h>
+ #include <QWidget>
+ #include <QtGui/QPushButton>
+ #include <QtGui/QToolButton>
+@@ -39,10 +38,9 @@ class MediaPlayer;
+ class MediaControls : public QWidget {
+ Q_OBJECT
+ public:
+-    MediaControls(MediaPlayer* mediaPlayer, QWidget* parent = 0);
++    MediaControls(void* mediaPlayer, QWidget* parent = 0);
+ 
+ private Q_SLOTS:
+-    void slotStateChanged(Phonon::State state);
+     void slotToggled(bool);
+ 
+ private:
+diff --git a/khtml/rendering/render_media.cpp b/khtml/rendering/render_media.cpp
+deleted file mode 100644
+index 5a9680f..0000000
+--- a/khtml/rendering/render_media.cpp
++++ /dev/null
+@@ -1,117 +0,0 @@
+-/*
+- * Copyright (C) 2009 Michael Howell <mhowell123@gmail.com>.
+- * Parts copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+- *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions
+- * are met:
+- * 1. Redistributions of source code must retain the above copyright
+- *    notice, this list of conditions and the following disclaimer.
+- * 2. Redistributions in binary form must reproduce the above copyright
+- *    notice, this list of conditions and the following disclaimer in the
+- *    documentation and/or other materials provided with the distribution.
+- *
+- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+- * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+- */
+-
+-#include "render_media.h"
+-#include "media_controls.h"
+-#include <phonon/mediaobject.h>
+-#include <phonon/videowidget.h>
+-#include <QtGui/QVBoxLayout>
+-
+-const double doubleMax = 999999999.8; // ### numeric_limits<double>::max()
+-const double doubleInf = 999999999.0; // ### numeric_limits<double>::infinity()
+-
+-using namespace DOM;
+-
+-namespace khtml {
+-
+-RenderMedia::RenderMedia(HTMLMediaElement* element) : RenderWidget(element), m_player(0)
+-{
+-    setInline(true); // <video> is an inline element.
+-    QWidget* container = new QWidget();
+-    container->setLayout(new QVBoxLayout(container));
+-    setQWidget(container);
+-}
+-
+-void RenderMedia::setPlayer(MediaPlayer* player)
+-{
+-    if (m_player == player) return;
+-    if (m_player) m_player->deleteLater();
+-    m_player = player;
+-    connect(player->mediaObject(), SIGNAL(metaDataChanged()), SLOT(slotMetaDataChanged()));
+-    player->setParent(widget());
+-    widget()->layout()->addWidget(player);
+-}
+-
+-void RenderMedia::layout()
+-{
+-    calcWidth();
+-    calcHeight();
+-
+-    RenderWidget::layout();
+-
+-    if (mediaElement()->controls() && widget()->layout()->count() == 1) {
+-        MediaControls* toolbox = new MediaControls(player(), widget());
+-	widget()->layout()->addWidget(toolbox);
+-	if ((!widget()->underMouse()) && mediaElement()->isVideo())
+-	    toolbox->hide();
+-	else
+-	    toolbox->show();
+-    }
+-}
+-
+-bool RenderMedia::eventFilter(QObject* o, QEvent* e)
+-{
+-    if (widget()->layout()->count() > 1 && mediaElement()->isVideo()) {
+-        switch(e->type()) {
+-        case QEvent::Enter:
+-	case QEvent::FocusIn:
+-	    widget()->layout()->itemAt(1)->widget()->show();
+-	    break;
+-	case QEvent::Leave:
+-	case QEvent::FocusOut:
+-	    widget()->layout()->itemAt(1)->widget()->hide();
+-	    break;
+-	default: ;
+-        }
+-    }
+-
+-    return RenderWidget::eventFilter(o, e);
+-}
+-
+-void RenderMedia::updateFromElement()
+-{
+-    RenderWidget::updateFromElement();
+-}
+-
+-void RenderMedia::slotMetaDataChanged()
+-{
+-    if (mediaElement()->isVideo()) {
+-        if (player()->videoWidget()->sizeHint().isValid()) {
+-	    setIntrinsicWidth(player()->videoWidget()->sizeHint().width());
+-	    setIntrinsicHeight(player()->videoWidget()->sizeHint().height());
+-        }
+-    } else {
+-        if (widget()->sizeHint().isValid()) {
+-	    setIntrinsicWidth(widget()->sizeHint().width());
+-	    setIntrinsicHeight(widget()->sizeHint().height());
+-        }
+-	player()->hide();
+-    }
+-
+-    setNeedsLayoutAndMinMaxRecalc();
+-}
+-
+-}
+diff --git a/khtml/rendering/render_media.h b/khtml/rendering/render_media.h
+deleted file mode 100644
+index 46b526c..0000000
+--- a/khtml/rendering/render_media.h
++++ /dev/null
+@@ -1,73 +0,0 @@
+-/*
+- * Copyright (C) 2009 Michael Howell <mhowell123@gmail.com>.
+- * Parts copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+- *
+- * Redistribution and use in source and binary forms, with or without
+- * modification, are permitted provided that the following conditions
+- * are met:
+- * 1. Redistributions of source code must retain the above copyright
+- *    notice, this list of conditions and the following disclaimer.
+- * 2. Redistributions in binary form must reproduce the above copyright
+- *    notice, this list of conditions and the following disclaimer in the
+- *    documentation and/or other materials provided with the distribution.
+- *
+- * THIS SOFTWARE IS PROVIDED BY APPLE COMPUTER, INC. ``AS IS'' AND ANY
+- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL APPLE COMPUTER, INC. OR
+- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+- * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+- * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+- */
+-
+-#ifndef render_media_h
+-#define render_media_h
+-
+-#include <phonon/videoplayer.h>
+-#include <rendering/render_replaced.h>
+-#include <html/HTMLMediaElement.h>
+-
+-namespace khtml {
+-
+-class MediaPlayer : public Phonon::VideoPlayer {
+-Q_OBJECT
+-public:
+-    inline MediaPlayer(Phonon::Category category, QWidget *parent = 0) : Phonon::VideoPlayer(category, parent)
+-    {
+-    }
+-    inline explicit MediaPlayer(QWidget* parent = 0) : Phonon::VideoPlayer(parent) {};
+-};
+-
+-class RenderMedia : public RenderWidget {
+-Q_OBJECT
+-public:
+-    virtual const char *renderName() const { return "RenderMedia"; }
+-    virtual bool isMedia() const { return true; }
+-
+-    void setPlayer(MediaPlayer* player);
+-    MediaPlayer* player() { return m_player; }
+-    const MediaPlayer* player() const { return m_player; }
+-    HTMLMediaElement* mediaElement() { return static_cast<HTMLMediaElement*>(RenderWidget::element()); }
+-    const HTMLMediaElement* mediaElement() const { return static_cast<const HTMLMediaElement*>(RenderWidget::element()); }
+-
+-protected:
+-    bool eventFilter(QObject*, QEvent*);
+-
+-private Q_SLOTS:
+-    void slotMetaDataChanged();
+-
+-private:
+-    RenderMedia(HTMLMediaElement* element);
+-    void layout();
+-    void updateFromElement();
+-    MediaPlayer* m_player;
+-    friend class HTMLMediaElement;
+-};
+-
+-} //namespace
+-
+-#endif
+diff --git a/knotify/config/knotifyconfigactionswidget.cpp b/knotify/config/knotifyconfigactionswidget.cpp
+index 88d18b6..879504f 100644
+--- a/knotify/config/knotifyconfigactionswidget.cpp
++++ b/knotify/config/knotifyconfigactionswidget.cpp
+@@ -21,8 +21,6 @@
+ #include <kstandarddirs.h>
+ #include <kiconloader.h>
+ 
+-#include <phonon/mediaobject.h>
+-
+ KNotifyConfigActionsWidget::KNotifyConfigActionsWidget( QWidget * parent )
+ 	: QWidget(parent)
+ {
+@@ -125,19 +123,6 @@ void KNotifyConfigActionsWidget::save( KNotifyConfigElement * config )
+ 
+ void KNotifyConfigActionsWidget::slotPlay(  )
+ {
+-	KUrl soundURL = m_ui.Sound_select->url();
+-	if ( soundURL.isRelative() )
+-	{
+-		QString soundString = soundURL.toLocalFile();
+-		// we need a way to get the application name in order to ba able to do this :
+-		/*QString search = QString("%1/sounds/%2").arg(config->appname).arg(soundFile);
+-		search = KGlobal::mainComponent().dirs()->findResource("data", search);
+-		if ( search.isEmpty() )*/
+-		soundURL = KUrl::fromPath( KStandardDirs::locate( "sound", soundString ) );
+-	}
+-	Phonon::MediaObject* media = Phonon::createPlayer( Phonon::NotificationCategory, soundURL );
+-	media->play();
+-	connect(media, SIGNAL(finished()), media, SLOT(deleteLater()));
+ }
+ 
+ void KNotifyConfigActionsWidget::slotKTTSComboChanged()
+-- 
+2.22.0
+
