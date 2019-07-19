@@ -173,57 +173,6 @@ index 1b15d40..369a633 100644
  
          connect(menu, SIGNAL(aboutToShow()), this, SLOT(contextMenuAboutToShow()));
      }
-diff --git a/kdewidgets/kde.widgets b/kdewidgets/kde.widgets
-index 85d9a33..e0140bd 100644
---- a/kdewidgets/kde.widgets
-+++ b/kdewidgets/kde.widgets
-@@ -1,21 +1,21 @@
- [Global]
- PluginName=KDEWidgets
--Includes=kcomponentdata.h,classpreviews.h,ktimezone.h
-+Includes=kcomponentdata.h,classpreviews.h,ktimezone.h,classpreviews.h
- Init=new KComponentData("kdewidgets");
- 
- [KActionSelector]
--IncludeFile=kactionselector.h
-+IncludeFile=kactionselector.h,classpreviews.h
- ToolTip=A widget for selecting and arranging actions/objects
- Group=Views (KDE)
- 
- [KAnimatedButton]
--IncludeFile=kanimatedbutton.h
-+IncludeFile=kanimatedbutton.h,classpreviews.h
- ToolTip=An extended version of QToolButton which can display an animated icon.
- Group=Display (KDE)
- ConstructorArgs=(parent)
- 
- [KButtonGroup]
--IncludeFile=kbuttongroup.h
-+IncludeFile=kbuttongroup.h,classpreviews.h
- ToolTip=Group of radio buttons with index selection.
- IsContainer=true
- Group=Container (KDE)
-@@ -102,6 +102,7 @@ Group=Date/Time (KDE)
- 
- [KDialog]
- IsContainer=true
-+IncludeFile=classpreviews.h
- ImplClass=KDialogPreview
- ToolTip=Class for simple Dialogs (KDE)
- Group=Container (KDE)
-diff --git a/kdewidgets/makekdewidgets.cpp b/kdewidgets/makekdewidgets.cpp
-index 3556572..3bb3a94 100644
---- a/kdewidgets/makekdewidgets.cpp
-+++ b/kdewidgets/makekdewidgets.cpp
-@@ -23,6 +23,8 @@ static const char classHeader[] = 	"/**\n"
- 					"#include <QtDesigner/QDesignerContainerExtension>\n"
- 					"#include <QDesignerCustomWidgetInterface>\n"
- 					"#include <qplugin.h>\n"
-+					"#include \"classpreviews.h\"\n"
-+					"#include \"keditlistbox.h\"\n"
- 					"#include <qdebug.h>\n";
- 
- static const char collClassDef[] = "class %CollName : public QObject, public QDesignerCustomWidgetCollectionInterface\n"
 diff --git a/khtml/CMakeLists.txt b/khtml/CMakeLists.txt
 index e02e285..367867e 100644
 --- a/khtml/CMakeLists.txt
