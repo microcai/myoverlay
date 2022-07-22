@@ -1,6 +1,8 @@
 # Copyright 1999-2016 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
-
+function get_major_version(){
+echo 4
+}
 # @ECLASS: kde4-base.eclass
 # @MAINTAINER:
 # kde@gentoo.org
@@ -33,7 +35,7 @@ _KDE4_BASE_ECLASS=1
 # for tests you should proceed with setting VIRTUALX_REQUIRED=test.
 : ${VIRTUALX_REQUIRED:=manual}
 
-inherit kde4-functions toolchain-funcs fdo-mime flag-o-matic gnome2-utils virtualx versionator eutils multilib
+inherit kde4-functions toolchain-funcs fdo-mime flag-o-matic gnome2-utils virtualx eutils multilib
 
 if [[ ${KDE_BUILD_TYPE} = live ]]; then
 	case ${KDE_SCM} in
@@ -65,36 +67,10 @@ KDE_MINIMAL="${KDE_MINIMAL:-4.4}"
 # Set slot for KDEBASE known packages
 case ${KDEBASE} in
 	kde-base)
-		SLOT=4/$(get_version_component_range 1-2)
+		SLOT=4/0
 		KDE_MINIMAL="${PV}"
 		;;
 	kdevelop)
-		if [[ ${KDE_BUILD_TYPE} = live ]]; then
-			# @ECLASS-VARIABLE: KDEVELOP_VERSION
-			# @DESCRIPTION:
-			# Specifies KDevelop version. Default is 4.0.0 for tagged packages and 9999 for live packages.
-			# Applies to KDEBASE=kdevelop only.
-			KDEVELOP_VERSION="${KDEVELOP_VERSION:-4.9999}"
-			# @ECLASS-VARIABLE: KDEVPLATFORM_VERSION
-			# @DESCRIPTION:
-			# Specifies KDevplatform version. Default is 1.0.0 for tagged packages and 9999 for live packages.
-			# Applies to KDEBASE=kdevelop only.
-			KDEVPLATFORM_VERSION="${KDEVPLATFORM_VERSION:-4.9999}"
-		else
-			case ${PN} in
-				kdevelop)
-					KDEVELOP_VERSION=${PV}
-					KDEVPLATFORM_VERSION="$(($(get_major_version)-3)).$(get_after_major_version)"
-					;;
-				kdevplatform|kdevelop-php*|kdevelop-python)
-					KDEVELOP_VERSION="$(($(get_major_version)+3)).$(get_after_major_version)"
-					KDEVPLATFORM_VERSION=${PV}
-					;;
-				*)
-					KDEVELOP_VERSION="${KDEVELOP_VERSION:-4.0.0}"
-					KDEVPLATFORM_VERSION="${KDEVPLATFORM_VERSION:-1.0.0}"
-			esac
-		fi
 		SLOT="4"
 		;;
 esac
@@ -129,12 +105,6 @@ OPENGL_REQUIRED="${OPENGL_REQUIRED:-never}"
 # Is qtmultimedia required? Possible values are 'always', 'optional' and 'never'.
 # This variable must be set before inheriting any eclasses. Defaults to 'never'.
 MULTIMEDIA_REQUIRED="${MULTIMEDIA_REQUIRED:-never}"
-
-# @ECLASS-VARIABLE: WEBKIT_REQUIRED
-# @DESCRIPTION:
-# Is qtwebkit required? Possible values are 'always', 'optional' and 'never'.
-# This variable must be set before inheriting any eclasses. Defaults to 'never'.
-WEBKIT_REQUIRED="${WEBKIT_REQUIRED:-never}"
 
 # @ECLASS-VARIABLE: CPPUNIT_REQUIRED
 # @DESCRIPTION:
@@ -263,22 +233,6 @@ case ${MULTIMEDIA_REQUIRED} in
 esac
 unset qtmultimediadepend
 
-# WebKit dependencies
-qtwebkitdepend="
-	dev-qt/qtwebkit
-"
-case ${WEBKIT_REQUIRED} in
-	always)
-		COMMONDEPEND+=" ${qtwebkitdepend}"
-		;;
-	optional)
-		IUSE+=" +webkit"
-		COMMONDEPEND+=" webkit? ( ${qtwebkitdepend} )"
-		;;
-	*) ;;
-esac
-unset qtwebkitdepend
-
 # CppUnit dependencies
 cppuintdepend="
 	dev-util/cppunit
@@ -312,11 +266,6 @@ kdecommondepend="
 
 if [[ ${PN} != kdelibs ]]; then
 	local _kdelibsuse
-	case ${WEBKIT_REQUIRED} in
-		always) _kdelibsuse="[webkit]" ;;
-		optional) _kdelibsuse="[webkit?]" ;;
-		*) ;;
-	esac
 #	kdecommondepend+=" >=kde-frameworks/kdelibs-4.14.22:4${_kdelibsuse}"
 	unset _kdelibsuse
 	if [[ ${KDEBASE} = kdevelop ]]; then
@@ -329,7 +278,7 @@ if [[ ${PN} != kdelibs ]]; then
 			case ${KDEVPLATFORM_REQUIRED} in
 				always)
 					kdecommondepend+="
-						>=dev-util/kdevplatform-${KDEVPLATFORM_VERSION}:4
+						>=dev-util/kdevplatform-1.7
 					"
 					;;
 				*) ;;
@@ -356,20 +305,6 @@ fi
 # all packages needs oxygen icons for basic iconset
 if [[ ${PN} != oxygen-icons ]]; then
 	kderdepend+=" kde-frameworks/oxygen-icons"
-fi
-
-# add a dependency over kde4-l10n
-if [[ ${KDEBASE} != "kde-base" && -n ${KDE_LINGUAS} ]]; then
-	for _lingua in $(kde4_lingua_to_l10n ${KDE_LINGUAS}); do
-		# if our package has linguas, pull in kde4-l10n with selected lingua enabled,
-		# but only for selected ones.
-		# this can't be done on one line because if user doesn't use any localisation
-		# then he is probably not interested in kde4-l10n at all.
-		kderdepend+="
-		l10n_${_lingua}? ( $(add_kdeapps_dep kde4-l10n "l10n_${_lingua}(+)") )
-		"
-	done
-	unset _lingua
 fi
 
 kdehandbookdepend="

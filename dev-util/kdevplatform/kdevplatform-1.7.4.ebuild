@@ -9,7 +9,7 @@ KDE_LINGUAS="bs ca ca@valencia da de el en_GB es et fi fr gl it kk nb nl pl pt
 pt_BR ru sk sl sv th tr uk zh_CN zh_TW"
 VIRTUALDBUS_TEST="true"
 VIRTUALX_REQUIRED="test"
-WEBKIT_REQUIRED="always"
+WEBKIT_REQUIRED="never"
 inherit kde4-base
 
 DESCRIPTION="KDE development support libraries and apps"
@@ -36,7 +36,6 @@ DEPEND="${COMMON_DEPEND}
 "
 RDEPEND="${COMMON_DEPEND}
 	cvs? ( dev-vcs/cvs )
-	!<dev-util/kdevelop-${KDEVELOP_VERSION}:4
 "
 
 src_configure() {

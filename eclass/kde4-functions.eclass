@@ -12,13 +12,11 @@
 if [[ -z ${_KDE4_FUNCTIONS_ECLASS} ]]; then
 _KDE4_FUNCTIONS_ECLASS=1
 
-inherit versionator
-
 # @ECLASS-VARIABLE: EAPI
 # @DESCRIPTION:
 # Currently kde4 eclasses support EAPI 5 and 6.
 case ${EAPI} in
-	5|6) : ;;
+	5|6|7|8|9) : ;;
 	*) die "EAPI=${EAPI:-0} is not supported" ;;
 esac
 
